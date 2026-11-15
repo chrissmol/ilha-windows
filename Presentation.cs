@@ -89,13 +89,15 @@ public partial class App {
   var bmp=new RenderTargetBitmap(600,270,96,96,PixelFormats.Pbgra32);bmp.Render(glass);var matte=new DrawingVisual();using(var dc=matte.RenderOpen()){dc.DrawRoundedRectangle(B("#101014"),null,new Rect(0,0,600,270),24,24);dc.DrawImage(bmp,new Rect(0,0,600,270));}var composited=new RenderTargetBitmap(600,270,96,96,PixelFormats.Pbgra32);composited.Render(matte);SavePng(composited,"preview-"+name+".png");
  }
  static void SavePng(BitmapSource image,string name){var enc=new PngBitmapEncoder();enc.Frames.Add(BitmapFrame.Create(image));using(var file=File.Create(System.IO.Path.Combine(dataDir,name)))enc.Save(file);}
+ static List<BitmapSource> morphFrames=new List<BitmapSource>();
  static void CaptureMorphFrame(int index){
   var visual=new DrawingVisual();using(var dc=visual.RenderOpen()){
    dc.DrawRectangle(B("#20252E"),null,new Rect(0,0,640,302));
    if(w.IsVisible){double width=Math.Max(1,w.ActualWidth),height=Math.Max(1,w.ActualHeight);var rect=new Rect((640-width)/2,12,width,height);dc.DrawRoundedRectangle(B("#101014"),null,rect,Math.Min(24,height/2),Math.Min(24,height/2));dc.DrawRectangle(new VisualBrush(windowHost){Stretch=Stretch.Fill},null,rect);}
   }
-  var bmp=new RenderTargetBitmap(640,302,96,96,PixelFormats.Pbgra32);bmp.Render(visual);SavePng(bmp,"morph/frame-"+index.ToString("000")+".png");
+  var bmp=new RenderTargetBitmap(640,302,96,96,PixelFormats.Pbgra32);bmp.Render(visual);bmp.Freeze();morphFrames.Add(bmp);
  }
+ static void SaveMorphFrames(){for(int i=0;i<morphFrames.Count;i++)SavePng(morphFrames[i],"morph/frame-"+i.ToString("000")+".png");morphFrames.Clear();}
  static void VisualChecks(){
   var parsed=Lrc.Parse("[00:01.20]First\n[00:03][00:05.500]Second\n[ar:Ignored]\n[00:77]Invalid");
   if(parsed.Count!=3||Lrc.At(parsed,.5)!=-1||Lrc.At(parsed,1.2)!=0||Lrc.At(parsed,5.5)!=2)throw new Exception("LRC parsing or timeline failed");
