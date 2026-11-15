@@ -1,6 +1,6 @@
 # SignPath setup after repository publication
 
-Publication and Foundation acceptance are separate steps. The Foundation evaluates project reputation and other requirements and may decline a new project.
+The Foundation application was submitted on 2026-11-15 and the form confirmed receipt. Account activation, approval and certificate access are pending. Publication and Foundation acceptance are separate steps. The Foundation evaluates project reputation and other requirements and may decline a new project.
 
 1. Publish the source repository and review the MIT license, project status, privacy policy and signing policy.
 2. Let the unsigned GitHub-hosted build run and inspect its checks and artifact.
@@ -13,4 +13,4 @@ Publication and Foundation acceptance are separate steps. The Foundation evaluat
 9. Dispatch the build workflow for a `v…` tag with signing enabled. Review and approve the request in SignPath.
 10. Inspect the signed artifact and the signature-verification result before publishing a signed release.
 
-No application, service terms or account access has been submitted/accepted automatically by these source files.
+The maintainer explicitly approved submitting the application and accepting the program terms and personal-data processing consent. The source files do not submit applications or accept account permissions.

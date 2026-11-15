@@ -2,7 +2,7 @@
 
 ## Status
 
-**Pending application.** Ilha has not been accepted by SignPath Foundation and no SignPath certificate is currently available to this project. Unsigned artifacts are labelled as such. Publishing the source alone does not remove Smart App Control restrictions.
+**Application submitted on 2026-11-15; awaiting review.** Ilha has not yet been accepted by SignPath Foundation and no SignPath certificate is currently available to this project. Unsigned artifacts are labelled as such. Publishing the source alone does not remove Smart App Control restrictions.
 
 If accepted, the project will display the required attribution: “Free code signing provided by SignPath.io, certificate by SignPath Foundation”. This statement is conditional until service has actually been granted.
 

@@ -59,7 +59,7 @@ See [Privacy](PRIVACY.md). To uninstall, shut down the tray application, remove 
 
 ## Code signing policy
 
-See [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md). A SignPath Foundation application is planned; no acceptance, certificate or signed release is claimed.
+See [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md). The SignPath Foundation application was submitted on 2026-11-15 and is awaiting review; no acceptance, certificate or signed release is claimed.
 
 ## License
 
