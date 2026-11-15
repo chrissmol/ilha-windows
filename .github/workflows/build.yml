@@ -37,6 +37,7 @@ jobs:
           path: |
             Dados/preview-*.png
             Dados/preview-notes.txt
+            Dados/morph/*.png
           if-no-files-found: error
       - name: Package unsigned build
         shell: powershell

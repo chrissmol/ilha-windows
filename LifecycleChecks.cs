@@ -6,7 +6,10 @@ using System.Windows.Threading;
 namespace Ilha {
 public partial class App {
  static void RunLifecycleChecks(){
-  int phase=0;var timer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(480)};
+  int phase=0,frame=0;SetPose(false,false);Directory.CreateDirectory(System.IO.Path.Combine(dataDir,"morph"));
+  var frames=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(40)};
+  frames.Tick+=(s,e)=>CaptureMorphFrame(frame++);frames.Start();
+  var timer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(480)};
   timer.Tick+=(s,e)=>{
    try{
     switch(phase++){
@@ -17,9 +20,9 @@ public partial class App {
      case 4:
       if(!w.IsVisible||!opened||Math.Abs(w.Width-600)>1||restingShell.Visibility!=Visibility.Collapsed)throw new Exception("Restore or interrupted transition failed");
       if(!DesktopContext.IsToolWindow(new WindowInteropHelper(w).Handle))throw new Exception("Native tool-window style was not retained");
-      timer.Stop();File.WriteAllText(System.IO.Path.Combine(dataDir,"ui-test.txt"),"PASS: native tool-window style, expand/collapse, hidden resident loop, restore, interrupted transition. "+DateTime.UtcNow.ToString("o"));w.Close();break;
+      timer.Stop();frames.Stop();CaptureMorphFrame(frame);File.WriteAllText(System.IO.Path.Combine(dataDir,"ui-test.txt"),"PASS: native tool-window style, expand/collapse, hidden resident loop, restore, interrupted transition. "+DateTime.UtcNow.ToString("o"));w.Close();break;
     }
-   }catch(Exception ex){timer.Stop();Environment.ExitCode=1;File.WriteAllText(System.IO.Path.Combine(dataDir,"ui-test.txt"),"FAIL: "+ex);w.Close();}
+   }catch(Exception ex){timer.Stop();frames.Stop();Environment.ExitCode=1;File.WriteAllText(System.IO.Path.Combine(dataDir,"ui-test.txt"),"FAIL: "+ex);w.Close();}
   };timer.Start();
  }
 }
