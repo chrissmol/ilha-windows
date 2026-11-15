@@ -4,7 +4,7 @@ $version=Get-Date -Format 'yyyyMMdd-HHmmssfff'
 $versionDir=Join-Path $PSScriptRoot ('Versions\'+$version)
 [IO.Directory]::CreateDirectory($versionDir) | Out-Null
 $references=@('WPF\PresentationFramework.dll','WPF\PresentationCore.dll','WPF\WindowsBase.dll','System.Xaml.dll','System.Windows.Forms.dll','System.Drawing.dll','System.Web.Extensions.dll') | ForEach-Object {'/reference:'+(Join-Path $framework $_)}
-$sources=@('Glass.cs','NativeGlass.cs','Integrations.cs','Dashboard.cs','MascotEyes.cs','Presence.cs','AssemblyInfo.cs') | ForEach-Object {Join-Path $PSScriptRoot $_}
+$sources=@('Glass.cs','NativeGlass.cs','Integrations.cs','Dashboard.cs','MascotEyes.cs','Presence.cs','Presentation.cs','AssemblyInfo.cs') | ForEach-Object {Join-Path $PSScriptRoot $_}
 & (Join-Path $framework 'csc.exe') /nologo /target:winexe /platform:anycpu ('/win32icon:'+(Join-Path $PSScriptRoot 'Ilha.ico')) ('/win32manifest:'+(Join-Path $PSScriptRoot 'app.manifest')) ('/out:'+(Join-Path $versionDir 'IlhaGlass.exe')) @references @sources
 if($LASTEXITCODE -ne 0){throw 'Falha ao compilar a Ilha.'}
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'IlhaGlass.exe.config') -Destination (Join-Path $versionDir 'IlhaGlass.exe.config')

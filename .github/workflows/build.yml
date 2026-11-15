@@ -27,6 +27,14 @@ jobs:
       - name: Check application
         shell: powershell
         run: .\scripts\Test.ps1
+      - name: Upload WPF visual checks
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ilha-visual-previews
+          path: |
+            Dados/preview-*.png
+            Dados/preview-notes.txt
+          if-no-files-found: error
       - name: Package unsigned build
         shell: powershell
         run: .\scripts\Package.ps1 -SkipBuild

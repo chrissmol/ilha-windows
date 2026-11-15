@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Diagnostics;
@@ -63,14 +63,23 @@ public partial class App {
  static DateTime nextBlink=DateTime.UtcNow.AddSeconds(3);static Random random=new Random();
  static System.Threading.EventWaitHandle openSignal,restartSignal;
  static void SetPose(bool expanded,bool animated){
-  opened=expanded;glass.Visibility=expanded?Visibility.Visible:Visibility.Collapsed;restingShell.Visibility=expanded?Visibility.Collapsed:Visibility.Visible;
+  opened=expanded;int revision=++poseRevision;glass.Width=600;glass.Height=270;glass.HorizontalAlignment=HorizontalAlignment.Center;glass.VerticalAlignment=VerticalAlignment.Top;
   if(expanded){view.Visibility=Visibility.Visible;nav.Visibility=Visibility.Visible;date.Visibility=Visibility.Visible;time.Visibility=Visibility.Visible;compact.Visibility=Visibility.Collapsed;}
   double width=expanded?600:128,height=expanded?270:34;
   double left=SystemParameters.WorkArea.Left+(SystemParameters.WorkArea.Width-width)/2;
-  if(animated){Animate(w,Window.WidthProperty,width);Animate(w,Window.HeightProperty,height);Animate(w,Window.LeftProperty,left);}else{
+  glass.IsHitTestVisible=expanded;restingShell.IsHitTestVisible=!expanded;
+  if(animated){
+   glass.Visibility=Visibility.Visible;restingShell.Visibility=Visibility.Visible;
+   Animate(w,Window.WidthProperty,width);Animate(w,Window.HeightProperty,height);Animate(w,Window.LeftProperty,left);
+   var panelFade=new System.Windows.Media.Animation.DoubleAnimation(expanded?1:0,TimeSpan.FromMilliseconds(expanded?260:140)){BeginTime=expanded?TimeSpan.FromMilliseconds(90):TimeSpan.Zero};
+   panelFade.Completed+=(s,e)=>{if(revision==poseRevision&&!expanded)glass.Visibility=Visibility.Collapsed;};glass.BeginAnimation(UIElement.OpacityProperty,panelFade);
+   var faceFade=new System.Windows.Media.Animation.DoubleAnimation(expanded?0:1,TimeSpan.FromMilliseconds(180));
+   faceFade.Completed+=(s,e)=>{if(revision==poseRevision&&expanded)restingShell.Visibility=Visibility.Collapsed;};restingShell.BeginAnimation(UIElement.OpacityProperty,faceFade);
+  }else{
    w.BeginAnimation(Window.WidthProperty,null);w.BeginAnimation(Window.HeightProperty,null);w.BeginAnimation(Window.LeftProperty,null);w.Width=width;w.Height=height;w.Left=left;
+   glass.BeginAnimation(UIElement.OpacityProperty,null);restingShell.BeginAnimation(UIElement.OpacityProperty,null);glass.Opacity=expanded?1:0;restingShell.Opacity=expanded?0:1;
+   glass.Visibility=expanded?Visibility.Visible:Visibility.Collapsed;restingShell.Visibility=expanded?Visibility.Collapsed:Visibility.Visible;
   }
-  if(expanded){view.Opacity=0;Animate(view,UIElement.OpacityProperty,1);}
  }
  static void SetupPresence(){
   string apps=System.IO.Path.Combine(dataDir,"hidden-apps.txt");if(File.Exists(apps))foreach(var line in File.ReadAllLines(apps))if(!String.IsNullOrWhiteSpace(line))hiddenApps.Add(line.Trim());

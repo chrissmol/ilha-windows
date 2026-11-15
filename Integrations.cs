@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Globalization;
@@ -27,7 +27,7 @@ public partial class App {
  static MediaState media=new MediaState();
  static bool useSystem=true; static Process mediaWorker; static int poll;
  static TextBlock mediaArtist,mediaHint,agentStatus,agentDetail,agentAge;
- static Image albumImage;static Border albumBorder;static string lastCover="",lastAgent="";
+ static Image albumImage;static string lastCover="",lastAgent="";
  static Slider systemSeek;static Button systemPlay,systemNext,systemPrevious;static Line rulerMarker;static Canvas rulerCanvas;
  static DispatcherTimer leaveTimer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(420)};
  static StackPanel NavIcon(string name,string label){
@@ -44,44 +44,37 @@ public partial class App {
  }
  static void SystemMusic(){
   if(!useSystem){LocalMusic();return;}
-  var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(184)});grid.ColumnDefinitions.Add(new ColumnDefinition());view.Children.Add(grid);
-  albumImage=new Image{Stretch=Stretch.UniformToFill};
-  var artwork=new Grid();artwork.Children.Add(new Border{Background=new LinearGradientBrush(B("#A9AA6556").Color,B("#70433D57").Color,65)});
-  var moon=new Ellipse{Width=62,Height=62,Fill=B("#60DDBDAA"),VerticalAlignment=VerticalAlignment.Top,Margin=new Thickness(20,13,0,0)};artwork.Children.Add(moon);
-  artwork.Children.Add(new System.Windows.Shapes.Path{Data=Geometry.Parse("M0,120 L35,87 61,101 95,77 135,104 175,90 175,150 0,150 Z"),Fill=B("#43382736"),Stretch=Stretch.Fill,VerticalAlignment=VerticalAlignment.Bottom,Height=69});
-  artwork.Children.Add(albumImage);albumBorder=new Border{Width=164,Height=143,HorizontalAlignment=HorizontalAlignment.Left,CornerRadius=new CornerRadius(12),ClipToBounds=true,Child=artwork};
-  albumBorder.SizeChanged+=(s,e)=>albumBorder.Clip=new RectangleGeometry(new Rect(0,0,albumBorder.ActualWidth,albumBorder.ActualHeight),12,12);grid.Children.Add(albumBorder);
+  var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(264)});grid.ColumnDefinitions.Add(new ColumnDefinition());view.Children.Add(grid);albumImage=backgroundArtwork;
   var info=new Grid();Grid.SetColumn(info,1);grid.Children.Add(info);
-  mediaArtist=T("",10,"#DDD2C9");mediaArtist.VerticalAlignment=VerticalAlignment.Top;mediaArtist.TextTrimming=TextTrimming.CharacterEllipsis;info.Children.Add(mediaArtist);
-  musicTitle=T("",24);musicTitle.FontWeight=FontWeights.SemiBold;musicTitle.TextWrapping=TextWrapping.Wrap;musicTitle.MaxHeight=61;musicTitle.VerticalAlignment=VerticalAlignment.Top;musicTitle.Margin=new Thickness(0,19,0,0);info.Children.Add(musicTitle);
-  mediaHint=T("",10,"#C3B9B4");mediaHint.VerticalAlignment=VerticalAlignment.Top;mediaHint.Margin=new Thickness(0,83,0,0);mediaHint.TextTrimming=TextTrimming.CharacterEllipsis;info.Children.Add(mediaHint);
-  var timeline=new Grid{Height=17,VerticalAlignment=VerticalAlignment.Bottom,Margin=new Thickness(0,0,0,31)};timeline.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(35)});timeline.ColumnDefinitions.Add(new ColumnDefinition());timeline.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(40)});
-  elapsed=T("0:00",9,"#DFD3CB");timeline.Children.Add(elapsed);
-  systemSeek=new Slider{Minimum=0,Maximum=100,IsMoveToPointEnabled=true,VerticalAlignment=VerticalAlignment.Center,Height=15};Grid.SetColumn(systemSeek,1);timeline.Children.Add(systemSeek);
+  mediaArtist=T("",10,"#CFC8C2");mediaArtist.VerticalAlignment=VerticalAlignment.Top;mediaArtist.TextTrimming=TextTrimming.CharacterEllipsis;info.Children.Add(mediaArtist);
+  var words=new Grid{Height=100,Margin=new Thickness(0,17,0,0),VerticalAlignment=VerticalAlignment.Top,ClipToBounds=true};words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(25)});words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(46)});words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(25)});info.Children.Add(words);
+  lyricBefore=T("",19,"#55EEE8E3");lyricBefore.TextTrimming=TextTrimming.CharacterEllipsis;words.Children.Add(lyricBefore);
+  lyricCurrent=T("",24);lyricCurrent.FontWeight=FontWeights.SemiBold;lyricCurrent.TextWrapping=TextWrapping.Wrap;lyricCurrent.MaxHeight=54;Grid.SetRow(lyricCurrent,1);words.Children.Add(lyricCurrent);
+  lyricAfter=T("",16,"#88DAD1C9");lyricAfter.TextTrimming=TextTrimming.CharacterEllipsis;Grid.SetRow(lyricAfter,2);words.Children.Add(lyricAfter);
+  musicTitle=lyricCurrent;mediaHint=T("",9,"#BDB4AE");mediaHint.Visibility=Visibility.Collapsed;info.Children.Add(mediaHint);
+  var timeline=new Grid{Height=17,VerticalAlignment=VerticalAlignment.Bottom,Margin=new Thickness(0,0,0,33)};timeline.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(35)});timeline.ColumnDefinitions.Add(new ColumnDefinition());timeline.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(40)});
+  elapsed=T("0:00",9,"#DFD3CB");timeline.Children.Add(elapsed);systemSeek=new Slider{Minimum=0,Maximum=100,IsMoveToPointEnabled=true,VerticalAlignment=VerticalAlignment.Center,Height=15};Grid.SetColumn(systemSeek,1);timeline.Children.Add(systemSeek);
   systemSeek.Style=(Style)XamlReader.Parse(@"<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='Slider'><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='Slider'><Grid Background='Transparent'><Border Height='3' Background='#35FFFFFF' CornerRadius='2'/><Track x:Name='PART_Track'><Track.DecreaseRepeatButton><RepeatButton Command='Slider.DecreaseLarge' Background='#F0DACE' BorderThickness='0' Height='3'><RepeatButton.Template><ControlTemplate TargetType='RepeatButton'><Border Background='{TemplateBinding Background}' Height='3' CornerRadius='2'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton><Track.Thumb><Thumb Width='6' Height='6'><Thumb.Template><ControlTemplate><Ellipse Fill='#F5E4D8'/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb><Track.IncreaseRepeatButton><RepeatButton Command='Slider.IncreaseLarge' Opacity='0' Height='10'/></Track.IncreaseRepeatButton></Track></Grid></ControlTemplate></Setter.Value></Setter></Style>");
-  systemSeek.PreviewMouseDown+=(s,e)=>seeking=true;systemSeek.PreviewMouseUp+=(s,e)=>{SendMedia("seek",media.duration*systemSeek.Value/100);seeking=false;};
-  systemSeek.LostMouseCapture+=(s,e)=>seeking=false;
+  systemSeek.PreviewMouseDown+=(s,e)=>seeking=true;systemSeek.PreviewMouseUp+=(s,e)=>{SeekTo(media.duration*systemSeek.Value/100);seeking=false;};systemSeek.LostMouseCapture+=(s,e)=>seeking=false;
   mediaDuration=T("−0:00",9,"#DFD3CB");mediaDuration.HorizontalAlignment=HorizontalAlignment.Right;Grid.SetColumn(mediaDuration,2);timeline.Children.Add(mediaDuration);info.Children.Add(timeline);
   var transport=Stack(Orientation.Horizontal);transport.HorizontalAlignment=HorizontalAlignment.Center;transport.VerticalAlignment=VerticalAlignment.Bottom;
-  systemPrevious=Btn("⏮",()=>SendMedia("previous"),"Anterior");transport.Children.Add(systemPrevious);
-  systemPlay=Btn("▶",()=>SendMedia("toggle"),"Reproduzir / pausar");systemPlay.Background=B("#F9F2E9");systemPlay.Foreground=B("#382D28");systemPlay.Width=31;systemPlay.Height=31;systemPlay.Padding=new Thickness(0);transport.Children.Add(systemPlay);
-  systemNext=Btn("⏭",()=>SendMedia("next"),"Próxima");transport.Children.Add(systemNext);info.Children.Add(transport);
-  var options=Btn("+",()=>{useSystem=false;Choose();if(tracks.Length==0){useSystem=true;Render();}},"Abrir arquivos locais");options.HorizontalAlignment=HorizontalAlignment.Right;options.VerticalAlignment=VerticalAlignment.Bottom;info.Children.Add(options);
-  lastCover="";UpdateSystemMusic();
+  systemPrevious=Btn("",()=>SendMedia("previous"),"Anterior");systemPrevious.Content=TransportIcon("previous");transport.Children.Add(systemPrevious);
+  systemPlay=Btn("",()=>SendMedia("toggle"),"Reproduzir / pausar");systemPlay.Background=B("#F9F2E9");systemPlay.Width=30;systemPlay.Height=30;systemPlay.Padding=new Thickness(0);RoundTransport(systemPlay);transport.Children.Add(systemPlay);
+  systemNext=Btn("",()=>SendMedia("next"),"Próxima");systemNext.Content=TransportIcon("next");transport.Children.Add(systemNext);info.Children.Add(transport);lastCover="";UpdateSystemMusic();UpdateLyrics();
  }
  static TextBlock mediaDuration;
  static void UpdateSystemMusic(){
   if(page!="music"||!useSystem||mediaArtist==null)return;
-  musicTitle.Text=String.IsNullOrWhiteSpace(media.title)?"Sua música, aqui.":media.title;
-  mediaArtist.Text=String.IsNullOrWhiteSpace(media.artist)?"MUSIC":media.artist;
+
+  mediaArtist.Text=media.available?(media.title??"")+" · "+(media.artist??""):"MUSIC";
   mediaHint.Text=media.available?(media.album??media.source??""):media.artist??"Abra uma música no Spotify ou navegador.";
-  mediaHint.ToolTip=media.error;systemPlay.Content=media.playing?"Ⅱ":"▶";systemPlay.IsEnabled=media.available&&media.canToggle;systemNext.IsEnabled=media.available&&media.canNext;systemPrevious.IsEnabled=media.available&&media.canPrevious;systemSeek.IsEnabled=media.available&&media.canSeek&&media.duration>0;
-  elapsed.Text=Format(media.position);mediaDuration.Text="−"+Format(media.duration-media.position);if(!seeking)systemSeek.Value=media.duration>0?Math.Max(0,Math.Min(100,media.position/media.duration*100)):0;
-  string cover=media.available?(media.cover??""):"";if(cover!=lastCover){lastCover=cover;albumImage.Source=null;try{if(File.Exists(cover)){var bmp=new BitmapImage();bmp.BeginInit();bmp.CacheOption=BitmapCacheOption.OnLoad;bmp.DecodePixelWidth=320;bmp.UriSource=new Uri(cover);bmp.EndInit();bmp.Freeze();albumImage.Source=bmp;Tint(bmp);}}catch{}}
+  mediaHint.ToolTip=media.error;systemPlay.Content=TransportIcon(media.playing?"pause":"play",true);systemPlay.IsEnabled=media.available&&media.canToggle;systemNext.IsEnabled=media.available&&media.canNext;systemPrevious.IsEnabled=media.available&&media.canPrevious;systemSeek.IsEnabled=media.available&&media.canSeek&&media.duration>0;
+  double position=MediaPosition();elapsed.Text=Format(position);mediaDuration.Text="−"+Format(media.duration-position);if(!seeking)systemSeek.Value=media.duration>0?Math.Max(0,Math.Min(100,position/media.duration*100)):0;
+  string cover=media.available?(media.cover??""):"";if(cover!=lastCover){lastCover=cover;albumImage.Source=Landscape();try{if(File.Exists(cover)){var bmp=new BitmapImage();bmp.BeginInit();bmp.CacheOption=BitmapCacheOption.OnLoad;bmp.DecodePixelWidth=320;bmp.UriSource=new Uri(cover);bmp.EndInit();bmp.Freeze();albumImage.Source=bmp;Tint(bmp);}}catch{}}
  }
  static void Tint(BitmapSource source){
   var small=new TransformedBitmap(source,new ScaleTransform(24.0/source.PixelWidth,24.0/source.PixelHeight));var rgba=new FormatConvertedBitmap(small,PixelFormats.Bgra32,null,0);int stride=rgba.PixelWidth*4;var pixels=new byte[stride*rgba.PixelHeight];rgba.CopyPixels(pixels,stride,0);long r=0,g=0,b=0,total=0;for(int i=0;i<pixels.Length;i+=4){int weight=Math.Max(1,Math.Max(pixels[i],Math.Max(pixels[i+1],pixels[i+2]))-Math.Min(pixels[i],Math.Min(pixels[i+1],pixels[i+2])));r+=pixels[i+2]*weight;g+=pixels[i+1]*weight;b+=pixels[i]*weight;total+=weight;}Color c=Color.FromArgb(110,(byte)(r/total),(byte)(g/total),(byte)(b/total));
-  glass.Background=new LinearGradientBrush(new GradientStopCollection{new GradientStop(c,0),new GradientStop(Color.FromArgb(48,c.R,c.G,c.B),.5),new GradientStop(Color.FromArgb(105,67,48,70),1)},45);
+  glass.Background=new LinearGradientBrush(new GradientStopCollection{new GradientStop(c,0),new GradientStop(Color.FromArgb(48,c.R,c.G,c.B),.5),new GradientStop(Color.FromArgb(130,(byte)(c.R*.23),(byte)(c.G*.23),(byte)(c.B*.23)),1)},45);
  }
  static void LiveAgent(){
   var panel=Stack();view.Children.Add(panel);var title=T("✳  Claude Code",25);title.FontWeight=FontWeights.SemiBold;panel.Children.Add(title);
@@ -117,7 +110,8 @@ public partial class App {
  }
  public static void Test(){
   Directory.CreateDirectory(dataDir);if(Format(1500)!="25:00"||Format(-1)!="00:00"||Format(3600)!="60:00")throw new Exception("Timer roundtrip");Build();Switch("focus");start.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));if(!running)throw new Exception("Timer start failed");start.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));if(running||remaining<1490||remaining>1500)throw new Exception("Timer pause failed");remaining=1500;var saved=media;media=new MediaState{available=true};SendMedia("seek",42.5);var command=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(System.IO.Path.Combine(dataDir,"media-command.json")));if(Convert.ToDouble(command["position"])!=42.5)throw new Exception("Media command failed");media=saved;
-  foreach(string p in new[]{"home","music","agent","focus","robo","settings"}){Switch(p);view.BeginAnimation(UIElement.OpacityProperty,null);view.Opacity=1;glass.Measure(new Size(600,270));glass.Arrange(new Rect(0,0,600,270));glass.UpdateLayout();var bmp=new RenderTargetBitmap(600,270,96,96,PixelFormats.Pbgra32);bmp.Render(glass);var enc=new PngBitmapEncoder();enc.Frames.Add(BitmapFrame.Create(bmp));using(var f=File.Create(System.IO.Path.Combine(dataDir,"preview-"+p+".png")))enc.Save(f);}
+  foreach(string p in new[]{"home","music","agent","focus","robo","settings"}){Switch(p);Capture(p);}
+  VisualChecks();
   SetPose(false,false);if(w.ShowInTaskbar||w.Width!=128||w.Height!=34||glass.Visibility!=Visibility.Collapsed)throw new Exception("Mascot rest pose");restingShell.Measure(new Size(128,34));restingShell.Arrange(new Rect(0,0,128,34));restingShell.UpdateLayout();var restBitmap=new RenderTargetBitmap(128,34,96,96,PixelFormats.Pbgra32);restBitmap.Render(restingShell);var restEncoder=new PngBitmapEncoder();restEncoder.Frames.Add(BitmapFrame.Create(restBitmap));using(var f=File.Create(System.IO.Path.Combine(dataDir,"preview-rest.png")))restEncoder.Save(f);if(!DesktopContext.CoversMonitor(new DesktopContext.Rect{Left=0,Top=0,Right=1920,Bottom=1080},new DesktopContext.Rect{Left=0,Top=0,Right=1920,Bottom=1080})||DesktopContext.CoversMonitor(new DesktopContext.Rect{Left=0,Top=0,Right=1920,Bottom=1040},new DesktopContext.Rect{Left=0,Top=0,Right=1920,Bottom=1080}))throw new Exception("Fullscreen classification");WriteHookSettings();File.WriteAllText(System.IO.Path.Combine(dataDir,"test-result.txt"),"PASS: six panels, timer start/pause, media command, hook config, mascot 128x34, switcher disabled, fullscreen rectangle classification. "+DateTime.UtcNow.ToString("o"));w.Close();
  }
  [STAThread] public static void Main(string[] args){
