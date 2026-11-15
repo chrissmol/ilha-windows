@@ -31,6 +31,7 @@ public static class DesktopContext {
  static uint cachedPid;static string cachedName="",cachedPath="";
  public static string ForegroundApp="";
  public static void HideFromSwitcher(Window window){var hwnd=new WindowInteropHelper(window).Handle;int style=GetWindowLong(hwnd,-20);SetWindowLong(hwnd,-20,(style|0x80)&~0x40000);}
+ public static bool IsToolWindow(IntPtr hwnd){int style=GetWindowLong(hwnd,-20);return (style&0x80)!=0&&(style&0x40000)==0;}
  public static bool CoversMonitor(Rect rect,Rect monitor){return rect.Left<=monitor.Left+2&&rect.Top<=monitor.Top+2&&rect.Right>=monitor.Right-2&&rect.Bottom>=monitor.Bottom-2;}
  public static bool Suppress(IntPtr ownWindow,ISet<string> hiddenApps){
   var hwnd=GetForegroundWindow();if(hwnd==IntPtr.Zero||hwnd==ownWindow||!IsWindowVisible(hwnd)||IsIconic(hwnd))return false;
