@@ -86,7 +86,7 @@ public partial class App {
   glass.BeginAnimation(UIElement.OpacityProperty,null);glass.Opacity=1;
   view.BeginAnimation(UIElement.OpacityProperty,null);view.Opacity=1;
   glass.Width=600;glass.Height=270;glass.Measure(new Size(600,270));glass.Arrange(new Rect(0,0,600,270));glass.UpdateLayout();
-  var bmp=new RenderTargetBitmap(600,270,96,96,PixelFormats.Pbgra32);bmp.Render(glass);SavePng(bmp,"preview-"+name+".png");
+  var bmp=new RenderTargetBitmap(600,270,96,96,PixelFormats.Pbgra32);bmp.Render(glass);var matte=new DrawingVisual();using(var dc=matte.RenderOpen()){dc.DrawRoundedRectangle(B("#101014"),null,new Rect(0,0,600,270),24,24);dc.DrawImage(bmp,new Rect(0,0,600,270));}var composited=new RenderTargetBitmap(600,270,96,96,PixelFormats.Pbgra32);composited.Render(matte);SavePng(composited,"preview-"+name+".png");
  }
  static void SavePng(BitmapSource image,string name){var enc=new PngBitmapEncoder();enc.Frames.Add(BitmapFrame.Create(image));using(var file=File.Create(System.IO.Path.Combine(dataDir,name)))enc.Save(file);}
  static void VisualChecks(){
@@ -98,7 +98,7 @@ public partial class App {
   foreach(string p in new[]{"home","music","focus"}){Switch(p);Capture("reference-"+p);}
   var savedChat=conversation;conversation=new List<Dictionary<string,string>>{new Dictionary<string,string>{{"role","user"},{"content","What is left tonight?"}},new Dictionary<string,string>{{"role","assistant"},{"content","One focus session, then time to rest."}}};Switch("robo");Capture("reference-robo");conversation=savedChat;
   media=saved;lyrics=savedLyrics;lyricsFor=savedKey;
-  File.WriteAllText(System.IO.Path.Combine(dataDir,"preview-notes.txt"),"reference-* images use explicit visual test fixtures. They do not show live playback or a live AI response. Native desktop acrylic is not included in offscreen renders.");
+  File.WriteAllText(System.IO.Path.Combine(dataDir,"preview-notes.txt"),"reference-* images use explicit visual test fixtures. They do not show live playback or a live AI response. Offscreen renders use a neutral dark matte; native desktop acrylic is not included.");
  }
 }
 }

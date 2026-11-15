@@ -47,9 +47,9 @@ public partial class App {
   var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(264)});grid.ColumnDefinitions.Add(new ColumnDefinition());view.Children.Add(grid);albumImage=backgroundArtwork;
   var info=new Grid();Grid.SetColumn(info,1);grid.Children.Add(info);
   mediaArtist=T("",10,"#CFC8C2");mediaArtist.VerticalAlignment=VerticalAlignment.Top;mediaArtist.TextTrimming=TextTrimming.CharacterEllipsis;info.Children.Add(mediaArtist);
-  var words=new Grid{Height=100,Margin=new Thickness(0,17,0,0),VerticalAlignment=VerticalAlignment.Top,ClipToBounds=true};words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(25)});words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(46)});words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(25)});info.Children.Add(words);
-  lyricBefore=T("",19,"#55EEE8E3");lyricBefore.TextTrimming=TextTrimming.CharacterEllipsis;words.Children.Add(lyricBefore);
-  lyricCurrent=T("",24);lyricCurrent.FontWeight=FontWeights.SemiBold;lyricCurrent.TextWrapping=TextWrapping.Wrap;lyricCurrent.MaxHeight=54;Grid.SetRow(lyricCurrent,1);words.Children.Add(lyricCurrent);
+  var words=new Grid{Height=100,Margin=new Thickness(0,17,0,0),VerticalAlignment=VerticalAlignment.Top,ClipToBounds=true};words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(20)});words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(58)});words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(20)});info.Children.Add(words);
+  lyricBefore=T("",17,"#55EEE8E3");lyricBefore.TextTrimming=TextTrimming.CharacterEllipsis;words.Children.Add(lyricBefore);
+  lyricCurrent=T("",22);lyricCurrent.FontWeight=FontWeights.SemiBold;lyricCurrent.TextWrapping=TextWrapping.Wrap;lyricCurrent.MaxHeight=58;Grid.SetRow(lyricCurrent,1);words.Children.Add(lyricCurrent);
   lyricAfter=T("",16,"#88DAD1C9");lyricAfter.TextTrimming=TextTrimming.CharacterEllipsis;Grid.SetRow(lyricAfter,2);words.Children.Add(lyricAfter);
   musicTitle=lyricCurrent;mediaHint=T("",9,"#BDB4AE");mediaHint.Visibility=Visibility.Collapsed;info.Children.Add(mediaHint);
   var timeline=new Grid{Height=17,VerticalAlignment=VerticalAlignment.Bottom,Margin=new Thickness(0,0,0,33)};timeline.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(35)});timeline.ColumnDefinitions.Add(new ColumnDefinition());timeline.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(40)});

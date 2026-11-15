@@ -14,7 +14,7 @@ namespace Ilha {
 public partial class App {
  static TextBlock dashTrack,dashArtist,dashTimer,dashReady,dashAgent,dashCount;
  static Image dashImage;static string dashCover="";
- static Button dashPlay,dashStart;static StackPanel chatMessages;static TextBox chatInput;static bool chatBusy;
+ static Button dashPlay,dashStart;static ScrollViewer chatScroll;static StackPanel chatMessages;static TextBox chatInput;static bool chatBusy;
  static List<Dictionary<string,string>> conversation=new List<Dictionary<string,string>>();
  static string localModel="";static TextBlock modelStatus;static ComboBox models;
  static Border Card(string top,string bottom,double width){return new Border{CornerRadius=new CornerRadius(12),Background=new LinearGradientBrush(B(top).Color,B(bottom).Color,90),Width=width,Padding=new Thickness(12),Cursor=Cursors.Hand};}
@@ -43,16 +43,17 @@ public partial class App {
   try{string path=System.IO.Path.Combine(dataDir,"agent.json");if(File.Exists(path)){var e=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(path));dashAgent.Text=e["event"]=="Stop"?"Concluído":e["event"]=="SessionEnd"?"Encerrado":"Conectado";dashCount.Text=e["event"]=="SessionEnd"?"0":"1";}else{dashCount.Text="0";dashAgent.Text="Sem sessão";}}catch{}
  }
  static void Robo(){
-  var layout=new Grid();layout.RowDefinitions.Add(new RowDefinition());layout.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});view.Children.Add(layout);
-  chatMessages=Stack();var scroll=new ScrollViewer{Content=chatMessages,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};layout.Children.Add(scroll);
+  var layout=new Grid();layout.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});layout.RowDefinitions.Add(new RowDefinition());layout.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});view.Children.Add(layout);
+  var chatHeader=new DockPanel{Margin=new Thickness(0,0,0,4)};chatHeader.Children.Add(T(String.IsNullOrEmpty(localModel)?"ROBO":"via "+localModel,9,"#AFA9B4"));var reset=Btn("New chat",()=>{if(!chatBusy){conversation.Clear();Switch("robo");}},"Nova conversa");reset.HorizontalAlignment=HorizontalAlignment.Right;reset.Padding=new Thickness(6,1,6,1);chatHeader.Children.Add(reset);layout.Children.Add(chatHeader);
+  chatMessages=Stack();chatScroll=new ScrollViewer{Content=chatMessages,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};Grid.SetRow(chatScroll,1);layout.Children.Add(chatScroll);
   if(conversation.Count==0){chatMessages.Children.Add(T("ROBO",9,"#C1B5CC"));var welcome=T("O que falta para hoje?",21);welcome.FontWeight=FontWeights.SemiBold;welcome.Margin=new Thickness(0,13,0,7);chatMessages.Children.Add(welcome);chatMessages.Children.Add(T(String.IsNullOrEmpty(localModel)?"Conecte uma IA local em Settings para conversar.":"IA local conectada · "+localModel,11,"#BDB4C7"));}else foreach(var message in conversation)AddChatBubble(message["content"],message["role"]=="user");
-  var entry=new Grid{Margin=new Thickness(0,9,0,0)};entry.ColumnDefinitions.Add(new ColumnDefinition());entry.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});Grid.SetRow(entry,1);layout.Children.Add(entry);
+  var entry=new Grid{Margin=new Thickness(0,9,0,0)};entry.ColumnDefinitions.Add(new ColumnDefinition());entry.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});Grid.SetRow(entry,2);layout.Children.Add(entry);
   chatInput=new TextBox{Background=Brushes.Transparent,Foreground=B("#F2ECE7"),BorderBrush=B("#25FFFFFF"),BorderThickness=new Thickness(0,0,0,1),Padding=new Thickness(0,5,8,5),FontSize=12,ToolTip="Mensagem para o Robo"};chatInput.KeyDown+=(s,e)=>{if(e.Key==Key.Enter){SendChat();e.Handled=true;}};entry.Children.Add(chatInput);
   var send=Btn("↑",SendChat,"Enviar");send.Width=29;send.Height=29;send.Padding=new Thickness(0);send.Background=B("#F5ECEA");send.Foreground=B("#28202E");Grid.SetColumn(send,1);entry.Children.Add(send);
  }
  static void AddChatBubble(string message,bool user){
   if(chatMessages==null)return;var text=T(message,12,user?"#EEE8E6":"#D9D0DF");text.TextWrapping=TextWrapping.Wrap;
-  var border=new Border{Child=text,CornerRadius=new CornerRadius(10),Padding=new Thickness(10,6,10,6),Margin=new Thickness(0,3,0,3),MaxWidth=450,Background=user?B("#25FFFFFF"):Brushes.Transparent,HorizontalAlignment=user?HorizontalAlignment.Right:HorizontalAlignment.Left};chatMessages.Children.Add(border);
+  var border=new Border{Child=text,CornerRadius=new CornerRadius(10),Padding=new Thickness(10,6,10,6),Margin=new Thickness(0,3,0,3),MaxWidth=450,Background=user?B("#25FFFFFF"):Brushes.Transparent,HorizontalAlignment=user?HorizontalAlignment.Right:HorizontalAlignment.Left};chatMessages.Children.Add(border);if(chatScroll!=null)chatScroll.ScrollToEnd();
  }
  static string LocalRequest(string route,string payload=null){
   var req=(HttpWebRequest)WebRequest.Create("http://127.0.0.1:11434/api/"+route);req.Timeout=payload==null?2000:60000;req.ReadWriteTimeout=req.Timeout;req.Proxy=null;
