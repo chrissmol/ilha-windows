@@ -1,0 +1,17 @@
+Dados/
+Versions/
+dist/
+signed/
+*.exe
+*.tmp
+*.bak
+current-version.txt
+claude-settings.json
+*.pfx
+*.p12
+*.key
+.env
+.env.*
+.vs/
+bin/
+obj/
