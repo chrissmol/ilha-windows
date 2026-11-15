@@ -4,7 +4,7 @@ $env:ILHA_ROOT=$root
 $runtime=Join-Path $root ([IO.File]::ReadAllText((Join-Path $root 'current-version.txt')).Trim())
 $result=Join-Path $root 'Dados\ui-test.txt'
 $before=[DateTime]::UtcNow
-$process=Start-Process -FilePath $runtime -ArgumentList '--ui-test' -WindowStyle Hidden -PassThru
+$process=Start-Process -FilePath $runtime -ArgumentList '--ui-test' -PassThru
 if(-not $process.WaitForExit(15000)){throw 'Resident application lifecycle timed out.'}
 if($process.ExitCode -ne 0){throw ('Lifecycle checks failed: '+$process.ExitCode)}
 if(-not (Test-Path -LiteralPath $result)){throw 'No lifecycle report.'}
