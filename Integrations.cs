@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Globalization;
@@ -15,7 +15,9 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using System.Web.Script.Serialization;
 namespace Ilha {
+public class MediaSource {public string source,title;public bool playing;}
 public class MediaState {
+ public MediaSource[] sessions;
  public bool available,playing,canSeek,canNext,canPrevious,canToggle;
  public string title,artist,album,source,cover,error,updated;
  public double position,duration;
@@ -39,12 +41,13 @@ public partial class App {
  static void SendMedia(string action,double pos=0){
   if(!media.available)return;
   string path=System.IO.Path.Combine(dataDir,"media-command.json");string temp=path+".tmp";
-  File.WriteAllText(temp,json.Serialize(new{ id=Guid.NewGuid().ToString("N"),action=action,position=pos}),new System.Text.UTF8Encoding(false));
+  File.WriteAllText(temp,json.Serialize(new{ id=Guid.NewGuid().ToString("N"),action=action,position=pos,source=media.source}),new System.Text.UTF8Encoding(false));
   if(File.Exists(path))File.Replace(temp,path,null);else File.Move(temp,path);
  }
  static void SystemMusic(){
   if(!useSystem){LocalMusic();return;}
   var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(264)});grid.ColumnDefinitions.Add(new ColumnDefinition());view.Children.Add(grid);albumImage=backgroundArtwork;
+  var sources=Btn("Origem ▾",SourceMenu,"Escolher aplicativo de mídia");sources.HorizontalAlignment=HorizontalAlignment.Left;sources.VerticalAlignment=VerticalAlignment.Bottom;grid.Children.Add(sources);
   var info=new Grid();Grid.SetColumn(info,1);grid.Children.Add(info);
   mediaArtist=T("",10,"#CFC8C2");mediaArtist.VerticalAlignment=VerticalAlignment.Top;mediaArtist.TextTrimming=TextTrimming.CharacterEllipsis;info.Children.Add(mediaArtist);
   var words=new Grid{Height=100,Margin=new Thickness(0,17,0,0),VerticalAlignment=VerticalAlignment.Top,ClipToBounds=true};words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(20)});words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(58)});words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(20)});info.Children.Add(words);
@@ -66,8 +69,8 @@ public partial class App {
  static void UpdateSystemMusic(){
   if(page!="music"||!useSystem||mediaArtist==null)return;
 
-  mediaArtist.Text=media.available?(media.title??"")+" · "+(media.artist??""):"MUSIC";
-  mediaHint.Text=media.available?(media.album??media.source??""):media.artist??"Abra uma música no Spotify ou navegador.";
+  mediaArtist.Text=media.available?(media.title??"")+" · "+(media.artist??""):"MÍDIA";
+  mediaHint.Text=media.available?(media.album??media.source??""):media.artist??"Reproduza áudio ou vídeo em um aplicativo ou navegador compatível.";
   mediaHint.ToolTip=media.error;systemPlay.Content=TransportIcon(media.playing?"pause":"play",true);systemPlay.IsEnabled=media.available&&media.canToggle;systemNext.IsEnabled=media.available&&media.canNext;systemPrevious.IsEnabled=media.available&&media.canPrevious;systemSeek.IsEnabled=media.available&&media.canSeek&&media.duration>0;
   double position=MediaPosition();elapsed.Text=Format(position);mediaDuration.Text="−"+Format(media.duration-position);if(!seeking)systemSeek.Value=media.duration>0?Math.Max(0,Math.Min(100,position/media.duration*100)):0;
   string cover=media.available?(media.cover??""):"";if(cover!=lastCover){lastCover=cover;albumImage.Source=Landscape();try{if(File.Exists(cover)){var bmp=new BitmapImage();bmp.BeginInit();bmp.CacheOption=BitmapCacheOption.OnLoad;bmp.DecodePixelWidth=320;bmp.UriSource=new Uri(cover);bmp.EndInit();bmp.Freeze();albumImage.Source=bmp;Tint(bmp);}}catch{}}
@@ -88,7 +91,7 @@ public partial class App {
   try{var e=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(path));string ev=e.ContainsKey("event")?e["event"]:"";string tool=e.ContainsKey("tool")?e["tool"]:"";
    agentStatus.Text=ev=="Stop"?"Concluído":ev=="Notification"?"Aguardando sua atenção":ev=="SessionEnd"?"Sessão encerrada":ev=="PreToolUse"?"Executando · "+tool:ev=="PostToolUse"?"Ferramenta concluída · "+tool:ev=="UserPromptSubmit"?"Trabalhando":"Sessão conectada";
    agentDetail.Text=(e.ContainsKey("project")?e["project"]:"")+(e.ContainsKey("file")?"  /  "+e["file"]:"");DateTime stamp;if(DateTime.TryParse(e["updated"],out stamp))agentAge.Text="Último evento às "+stamp.ToLocalTime().ToString("HH:mm:ss");
-   if(lastAgent!=e["updated"]){if(ev=="Stop"&&lastAgent!="")if(!contextHidden)System.Media.SystemSounds.Asterisk.Play();lastAgent=e["updated"];}
+   if(lastAgent!=e["updated"]){if(ev=="Stop"&&lastAgent!="")if(!contextHidden&&!doNotDisturb)System.Media.SystemSounds.Asterisk.Play();lastAgent=e["updated"];}
   }catch{}
  }
  static void PollIntegrations(){
@@ -100,7 +103,7 @@ public partial class App {
  }
  static bool uiTest;
  static void StartMediaBridge(){
-  Directory.CreateDirectory(dataDir);WriteHookSettings();string modelFile=System.IO.Path.Combine(dataDir,"model.txt");if(File.Exists(modelFile))localModel=File.ReadAllText(modelFile).Trim();leaveTimer.Tick+=(s,e)=>{leaveTimer.Stop();if(!w.IsMouseOver&&w.IsEnabled&&Mouse.Captured==null)Expand(false);};
+  Directory.CreateDirectory(dataDir);WriteHookSettings();string modelFile=System.IO.Path.Combine(dataDir,"model.txt");if(File.Exists(modelFile))localModel=File.ReadAllText(modelFile).Trim();leaveTimer.Tick+=(s,e)=>{leaveTimer.Stop();if(!w.IsMouseOver&&w.IsEnabled&&Mouse.Captured==null&&!dropHover)Expand(false);};
   try{var info=new ProcessStartInfo("powershell.exe","-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""+System.IO.Path.Combine(baseDir,"MediaBridge.ps1")+"\" -OwnerPid "+Process.GetCurrentProcess().Id){UseShellExecute=false,CreateNoWindow=true,WindowStyle=ProcessWindowStyle.Hidden};mediaWorker=Process.Start(info);}catch(Exception ex){media.error=ex.Message;}
  }
  static void WriteHookSettings(){
@@ -109,7 +112,7 @@ public partial class App {
   File.WriteAllText(System.IO.Path.Combine(baseDir,"claude-settings.json"),json.Serialize(new{hooks=hooks}),new System.Text.UTF8Encoding(false));
  }
  public static void Test(){
-  Directory.CreateDirectory(dataDir);if(Format(1500)!="25:00"||Format(-1)!="00:00"||Format(3600)!="60:00")throw new Exception("Timer roundtrip");Build();Switch("focus");start.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));if(!running)throw new Exception("Timer start failed");start.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));if(running||remaining<1490||remaining>1500)throw new Exception("Timer pause failed");remaining=1500;var saved=media;media=new MediaState{available=true};SendMedia("seek",42.5);var command=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(System.IO.Path.Combine(dataDir,"media-command.json")));if(Convert.ToDouble(command["position"])!=42.5)throw new Exception("Media command failed");media=saved;
+  Directory.CreateDirectory(dataDir);if(Format(1500)!="25:00"||Format(-1)!="00:00"||Format(3600)!="60:00")throw new Exception("Timer roundtrip");Build();CheckExperience();Switch("focus");start.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));if(!running)throw new Exception("Timer start failed");start.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));if(running||remaining<1490||remaining>1500)throw new Exception("Timer pause failed");remaining=1500;var saved=media;media=new MediaState{available=true};SendMedia("seek",42.5);var command=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(System.IO.Path.Combine(dataDir,"media-command.json")));if(Convert.ToDouble(command["position"])!=42.5)throw new Exception("Media command failed");media=saved;
   foreach(string p in new[]{"home","music","agent","focus","robo","settings"}){Switch(p);Capture(p);}
   VisualChecks();
   SetPose(false,false);if(w.ShowInTaskbar||w.Width!=128||w.Height!=34||glass.Visibility!=Visibility.Collapsed)throw new Exception("Mascot rest pose");restingShell.Measure(new Size(128,34));restingShell.Arrange(new Rect(0,0,128,34));restingShell.UpdateLayout();var restBitmap=new RenderTargetBitmap(128,34,96,96,PixelFormats.Pbgra32);restBitmap.Render(restingShell);var restEncoder=new PngBitmapEncoder();restEncoder.Frames.Add(BitmapFrame.Create(restBitmap));using(var f=File.Create(System.IO.Path.Combine(dataDir,"preview-rest.png")))restEncoder.Save(f);if(!DesktopContext.CoversMonitor(new DesktopContext.Rect{Left=0,Top=0,Right=1920,Bottom=1080},new DesktopContext.Rect{Left=0,Top=0,Right=1920,Bottom=1080})||DesktopContext.CoversMonitor(new DesktopContext.Rect{Left=0,Top=0,Right=1920,Bottom=1040},new DesktopContext.Rect{Left=0,Top=0,Right=1920,Bottom=1080}))throw new Exception("Fullscreen classification");WriteHookSettings();File.WriteAllText(System.IO.Path.Combine(dataDir,"test-result.txt"),"PASS: six panels, timer start/pause, media command, hook config, mascot 128x34, switcher disabled, fullscreen rectangle classification. "+DateTime.UtcNow.ToString("o"));w.Close();

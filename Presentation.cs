@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Globalization;
 using System.Collections.Generic;
@@ -50,7 +50,7 @@ public partial class App {
   var menu=new ContextMenu();
   Action<string,Action> add=(label,action)=>{var item=new MenuItem{Header=label};item.Click+=(s,e)=>action();menu.Items.Add(item);};
   add("Abrir música local…",Choose);add("Carregar letra sincronizada (.lrc)…",LoadLyrics);
-  add("Novo foco",()=>Switch("focus"));add("Nova conversa",()=>{if(!chatBusy){conversation.Clear();Switch("robo");}});
+  add("Prateleira temporária",()=>Switch("shelf"));add("Volume e saída de áudio",()=>Switch("audio"));add("Novo foco",()=>Switch("focus"));add("Nova conversa",()=>{if(!chatBusy){conversation.Clear();Switch("robo");}});
   menu.PlacementTarget=source;menu.IsOpen=true;
  }
  static void LoadLyrics(){

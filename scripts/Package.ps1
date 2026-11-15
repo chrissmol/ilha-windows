@@ -13,5 +13,6 @@ foreach($file in $files){
  Copy-Item -LiteralPath (Join-Path $root $file) -Destination $target
 }
 $zip=Join-Path $dist 'Ilha-Windows-unsigned.zip'
+Copy-Item -LiteralPath (Join-Path $root 'Fonts\LICENSE.txt') -Destination (Join-Path $stage 'Inter-LICENSE.txt')
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip -Force
 Write-Output $zip

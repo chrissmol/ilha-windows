@@ -24,17 +24,33 @@ try {
  do {
   try {
    $session=$manager.GetCurrentSession()
-   if($null -eq $session){Publish @{available=$false;error='';title='Nenhuma mídia ativa';artist='Abra uma música no Spotify ou no navegador.';playing=$false;position=0;duration=0;cover=''}}else{
+   $sessions=@($manager.GetSessions())
+   $sources=@();foreach($entry in $sessions){try{$entryProps=Await ($entry.TryGetMediaPropertiesAsync()) $propsType;$sources+=@{source=$entry.SourceAppUserModelId;title=$entryProps.Title;playing=($entry.GetPlaybackInfo().PlaybackStatus.ToString() -eq 'Playing')}}catch{}}
+   $preferred='';$sourcePath=Join-Path $data 'media-source.txt';if(Test-Path -LiteralPath $sourcePath){$preferred=[IO.File]::ReadAllText($sourcePath).Trim()}
+   $pinned=$false;if($preferred){foreach($entry in $sessions){if($entry.SourceAppUserModelId -eq $preferred){$session=$entry;$pinned=$true;break}}}
+   # Prefer the Windows-selected source when playing; otherwise find an active
+   # session from any application, including browsers and video players.
+   $currentPlaying=$false
+   if($null -ne $session){try{$currentPlaying=$session.GetPlaybackInfo().PlaybackStatus.ToString() -eq 'Playing'}catch{}}
+   if(-not $currentPlaying -and -not $pinned){
+    foreach($candidate in $sessions){
+     try{if($candidate.GetPlaybackInfo().PlaybackStatus.ToString() -eq 'Playing'){$session=$candidate;break}}catch{}
+    }
+   }
+   if($null -eq $session){Publish @{available=$false;error='';title='Nenhuma mídia ativa';artist='Reproduza áudio ou vídeo em um aplicativo ou navegador compatível.';playing=$false;position=0;duration=0;cover=''}}else{
     $commandPath=Join-Path $data 'media-command.json'
     if(Test-Path -LiteralPath $commandPath){
      try {
       $command=Get-Content -LiteralPath $commandPath -Raw | ConvertFrom-Json
       if($command.id -ne $lastCommand){$lastCommand=$command.id
+       $commandSession=$session
+       if($command.source){$commandSession=$null;foreach($entry in $sessions){if($entry.SourceAppUserModelId -eq $command.source){$commandSession=$entry;break}}}
+       if($null -eq $commandSession){throw 'A origem de mídia foi encerrada.'}
        switch($command.action){
-        'toggle' {$null=Await ($session.TryTogglePlayPauseAsync()) ([bool])}
-        'next' {$null=Await ($session.TrySkipNextAsync()) ([bool])}
-        'previous' {$null=Await ($session.TrySkipPreviousAsync()) ([bool])}
-        'seek' {$null=Await ($session.TryChangePlaybackPositionAsync([long]([double]$command.position*10000000))) ([bool])}
+        'toggle' {$null=Await ($commandSession.TryTogglePlayPauseAsync()) ([bool])}
+        'next' {$null=Await ($commandSession.TrySkipNextAsync()) ([bool])}
+        'previous' {$null=Await ($commandSession.TrySkipPreviousAsync()) ([bool])}
+        'seek' {$null=Await ($commandSession.TryChangePlaybackPositionAsync([long]([double]$command.position*10000000))) ([bool])}
        }
       }
      }catch{ }
@@ -57,7 +73,7 @@ try {
     $position=$timeline.Position.TotalSeconds
     $rate=$playback.PlaybackRate;if($null -eq $rate){$rate=1}
     if($playback.PlaybackStatus.ToString() -eq 'Playing'){$position+=[Math]::Max(0,([DateTimeOffset]::Now-$timeline.LastUpdatedTime).TotalSeconds)*$rate}
-    Publish @{available=$true;error='';title=$props.Title;artist=$props.Artist;album=$props.AlbumTitle;source=$session.SourceAppUserModelId;playing=($playback.PlaybackStatus.ToString() -eq 'Playing');position=$position;duration=$timeline.EndTime.TotalSeconds;cover=$cover;canSeek=$playback.Controls.IsPlaybackPositionEnabled;canNext=$playback.Controls.IsNextEnabled;canPrevious=$playback.Controls.IsPreviousEnabled;canToggle=$playback.Controls.IsPlayPauseToggleEnabled}
+    Publish @{available=$true;error='';sessions=$sources;title=$props.Title;artist=$props.Artist;album=$props.AlbumTitle;source=$session.SourceAppUserModelId;playing=($playback.PlaybackStatus.ToString() -eq 'Playing');position=$position;duration=$timeline.EndTime.TotalSeconds;cover=$cover;canSeek=$playback.Controls.IsPlaybackPositionEnabled;canNext=$playback.Controls.IsNextEnabled;canPrevious=$playback.Controls.IsPreviousEnabled;canToggle=$playback.Controls.IsPlayPauseToggleEnabled}
    }
   }catch{Publish @{available=$false;error=$_.Exception.GetBaseException().Message;title='Mídia indisponível';artist='O Windows não forneceu os dados da sessão.';playing=$false;position=0;duration=0;cover=''}}
   if($Once){break}

@@ -69,3 +69,13 @@ See [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md). The SignPath Foundation ap
 ## Visual checks
 
 The GitHub workflow uploads an `ilha-visual-previews` artifact containing offscreen WPF renders. Files named `preview-reference-*` use explicit synthetic playback/chat fixtures for visual review; they are not live service results. Native desktop acrylic is composited by Windows and is not included in these offscreen images.
+
+### Experiência ampliada
+
+- Mídia: seleção automática ou por aplicativo das sessões SMTC expostas pelo Windows. Os comandos são endereçados à origem exibida. Áudio de apps sem SMTC não fornece capa, título ou transporte por esta integração.
+- Áudio: volume do dispositivo padrão via Core Audio e seleção de saída. A mudança de saída utiliza PolicyConfig, uma interface não documentada que pode variar entre versões do Windows; erros são exibidos ao usuário.
+- Prateleira: arraste arquivos, textos e imagens. Clique para copiar ou arraste um item para outro app. Até 12 itens, somente na memória, expiram em uma hora. Arquivos são referências: mover ou excluir o original invalida a referência. Nada é enviado à rede. A área de transferência é controlada pelo Windows e pode manter o conteúdo copiado após a expiração.
+- Mascote: olhar suavizado, foco em violeta, expressão de recebimento/conclusão e tempo restante no estado compacto.
+- Preferências: escolha de monitor e não incomodar; este modo desativa expansão por hover e interrupções do timer, mantendo abertura por clique/bandeja.
+- As animações respeitam a preferência de animação do Windows. O foco continua ao trocar de aba, e o rascunho do chat é preservado.
+- A prévia no navegador demonstra origens e saídas fictícias. Ela não controla o áudio do computador. A cópia de arquivos e imagens pode ser limitada pelo navegador.

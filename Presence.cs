@@ -64,10 +64,11 @@ public partial class App {
  static DateTime nextBlink=DateTime.UtcNow.AddSeconds(3);static Random random=new Random();
  static System.Threading.EventWaitHandle openSignal,restartSignal;
  static void SetPose(bool expanded,bool animated){
+  if(!SystemParameters.ClientAreaAnimation)animated=false;
   opened=expanded;int revision=++poseRevision;glass.Width=600;glass.Height=270;glass.HorizontalAlignment=HorizontalAlignment.Center;glass.VerticalAlignment=VerticalAlignment.Top;
   if(expanded){view.Visibility=Visibility.Visible;nav.Visibility=Visibility.Visible;date.Visibility=Visibility.Visible;time.Visibility=Visibility.Visible;compact.Visibility=Visibility.Collapsed;}
-  double width=expanded?600:128,height=expanded?270:34;
-  double left=SystemParameters.WorkArea.Left+(SystemParameters.WorkArea.Width-width)/2;
+  double width=expanded?600:compactWide?176:128,height=expanded?270:34;
+  var area=MonitorArea();double left=area.Left+(area.Width-width)/2;w.Top=area.Top+8;
   glass.IsHitTestVisible=expanded;restingShell.IsHitTestVisible=!expanded;
   if(animated){
    glass.Visibility=Visibility.Visible;restingShell.Visibility=Visibility.Visible;
@@ -95,7 +96,7 @@ public partial class App {
   else if(!suppress&&contextHidden){contextHidden=false;SetPose(false,false);w.Show();}
   if(openSignal!=null&&openSignal.WaitOne(0)&&!contextHidden){w.Show();Expand(true);}
   if(!opened&&mascot!=null&&!contextHidden){
-   Point gaze=DesktopContext.Gaze(w);mascot.GazeX=gaze.X;mascot.GazeY=gaze.Y;mascot.InvalidateVisual();
+   Point gaze=DesktopContext.Gaze(w);mascot.GazeX+=(gaze.X-mascot.GazeX)*.35;mascot.GazeY+=(gaze.Y-mascot.GazeY)*.35;mascot.InvalidateVisual();
    if(DateTime.UtcNow>=nextBlink){mascot.BlinkOnce();nextBlink=DateTime.UtcNow.AddSeconds(3+random.NextDouble()*4);}
   }
  }
