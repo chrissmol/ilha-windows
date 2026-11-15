@@ -19,7 +19,7 @@ public partial class App {
   w.Closed+=(s,e)=>File.WriteAllText(Path.Combine(dataDir,"experience.json"),json.Serialize(new{monitor=selectedMonitor,quiet=doNotDisturb}));
   var face=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};
   mascot.HorizontalAlignment=HorizontalAlignment.Center;restingShell.Child=null;face.Children.Add(mascot);compactStatus=T("",12);compactStatus.Margin=new Thickness(8,0,0,0);compactStatus.Visibility=Visibility.Collapsed;face.Children.Add(compactStatus);restingShell.Child=face;
-  w.AllowDrop=true;w.PreviewDragOver+=(s,e)=>{bool valid=e.Data.GetDataPresent(DataFormats.FileDrop)||e.Data.GetDataPresent(DataFormats.UnicodeText)||e.Data.GetDataPresent(DataFormats.Bitmap);e.Effects=valid?DragDropEffects.Copy:DragDropEffects.None;e.Handled=true;if(valid){dropHover=true;leaveTimer.Stop();if(page!="shelf")Switch("shelf");Expand(true);}};
+  w.AllowDrop=true;w.PreviewDragOver+=(s,e)=>{bool valid=e.Data.GetDataPresent(DataFormats.FileDrop)||e.Data.GetDataPresent(DataFormats.UnicodeText)||e.Data.GetDataPresent(DataFormats.Bitmap);e.Effects=valid?DragDropEffects.Copy:DragDropEffects.None;e.Handled=true;if(valid){dropHover=true;leaveTimer.Stop();if(page!="shelf")Switch("shelf");if(!opened)Expand(true);}};
   w.DragLeave+=(s,e)=>{dropHover=false;leaveTimer.Start();};w.Drop+=(s,e)=>{dropHover=false;ReceiveDrop(e.Data);Switch("shelf");e.Handled=true;};
   restingShell.MouseLeftButtonUp+=(s,e)=>Expand(true);
  }
@@ -30,7 +30,7 @@ public partial class App {
   else if(data.GetDataPresent(DataFormats.UnicodeText)){item.Text=Convert.ToString(data.GetData(DataFormats.UnicodeText));if(String.IsNullOrWhiteSpace(item.Text))return;if(item.Text.Length>1000000){error="Texto muito grande para a prateleira.";ShowError();return;}item.Name=item.Text.Replace("\r"," ").Replace("\n"," ");if(item.Name.Length>48)item.Name=item.Name.Substring(0,48)+"…";}else return;
   shelf.Insert(0,item);if(shelf.Count>ShelfLimit)shelf.RemoveAt(shelf.Count-1);celebrateUntil=DateTime.UtcNow.AddSeconds(2);
  }
- static DataObject ShelfData(ShelfItem item){var d=new DataObject();if(item.Files!=null)d.SetData(DataFormats.FileDrop,item.Files);else if(item.Image!=null)d.SetData(DataFormats.Bitmap,item.Image);else d.SetText(item.Text);return d;}
+ static DataObject ShelfData(ShelfItem item){var d=new DataObject();if(item.Files!=null){d.SetData(DataFormats.FileDrop,item.Files);if(item.Files.Length==1&&new[]{".png",".jpg",".jpeg",".bmp",".gif"}.Contains(Path.GetExtension(item.Files[0]).ToLowerInvariant()))try{var image=new BitmapImage();image.BeginInit();image.CacheOption=BitmapCacheOption.OnLoad;using(var metadata=System.Drawing.Image.FromFile(item.Files[0])){if(metadata.Width>4096)image.DecodePixelWidth=4096;}image.UriSource=new Uri(item.Files[0]);image.EndInit();image.Freeze();d.SetData(DataFormats.Bitmap,image);}catch{}}else if(item.Image!=null)d.SetData(DataFormats.Bitmap,item.Image);else d.SetText(item.Text);return d;}
  static void Shelf(){
   var root=new Grid();root.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});root.RowDefinitions.Add(new RowDefinition());view.Children.Add(root);
   var header=Stack(Orientation.Horizontal);header.Children.Add(T("Prateleira temporária",18));header.Children.Add(Btn("Limpar",()=>{shelf.Clear();Switch("shelf");}));root.Children.Add(header);
