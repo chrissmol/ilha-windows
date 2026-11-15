@@ -79,3 +79,7 @@ The GitHub workflow uploads an `ilha-visual-previews` artifact containing offscr
 - Preferências: escolha de monitor e não incomodar; este modo desativa expansão por hover e interrupções do timer, mantendo abertura por clique/bandeja.
 - As animações respeitam a preferência de animação do Windows. O foco continua ao trocar de aba, e o rascunho do chat é preservado.
 - A prévia no navegador demonstra origens e saídas fictícias. Ela não controla o áudio do computador. A cópia de arquivos e imagens pode ser limitada pelo navegador.
+
+### Ondas de áudio reais
+
+Na aba Mídia, os olhos se transformam em sete barras que mostram o histórico recente de picos da saída padrão (Core Audio / IAudioMeterInformation). Não é um espectro de frequências. A leitura ocorre a cada 50 ms em uma thread separada, e a saída padrão é verificada a cada segundo para acompanhar trocas de dispositivo. A leitura pausa quando a Ilha está oculta ou não apresenta mídia. Nenhum microfone é aberto; não há captura, gravação ou transmissão de áudio. O medidor do Windows é anterior à atenuação do volume do dispositivo, portanto pode continuar indicando sinal mesmo com volume reduzido ou mudo. As barras representam a mistura da saída padrão, e não exclusivamente o aplicativo escolhido no seletor de mídia. Em indisponibilidade, ficam em repouso com explicação no tooltip. Movimento reduzido mantém o indicador estático. No navegador, a animação é demonstrativa e não mede o som do PC.

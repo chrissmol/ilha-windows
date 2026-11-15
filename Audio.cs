@@ -5,6 +5,23 @@ namespace Ilha {
 // Core Audio COM contracts. Objects are scoped to each operation so changing
 // the default endpoint or unplugging a device never leaves a cached endpoint.
 public static class DesktopAudio {
+ [ComImport,Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] interface IPeak {void GetPeakValue(out float peak);}
+ // Only normalized output peak values are read. No audio buffers or input
+ // devices are opened. All COM objects live on the worker that created them.
+ public sealed class PeakMonitor : IDisposable {
+  public volatile float Level;public volatile bool Available,Enabled;public string Error="";
+  readonly System.Threading.ManualResetEvent stop=new System.Threading.ManualResetEvent(false);readonly System.Threading.Thread worker;
+  public PeakMonitor(){worker=new System.Threading.Thread(Read){IsBackground=true,Name="Ilha output meter"};worker.SetApartmentState(System.Threading.ApartmentState.MTA);worker.Start();}
+  void Read(){IDevices e=null;IDevice d=null;object meter=null;string id="";DateTime refresh=DateTime.MinValue;
+   try{while(!stop.WaitOne(50)){
+    if(!Enabled){Level=0;continue;}
+    try{if(e==null)e=(IDevices)new Enumerator();if(DateTime.UtcNow>=refresh){refresh=DateTime.UtcNow.AddSeconds(1);IDevice next=null;try{e.GetDefaultAudioEndpoint(0,1,out next);string nextId;next.GetId(out nextId);if(nextId!=id||meter==null){Release(meter);meter=null;Release(d);d=next;next=null;var iid=typeof(IPeak).GUID;d.Activate(ref iid,23,IntPtr.Zero,out meter);id=nextId;}}finally{Release(next);}}
+     float value;((IPeak)meter).GetPeakValue(out value);Level=Single.IsNaN(value)||Single.IsInfinity(value)?0:Math.Max(0,Math.Min(1,value));Available=true;Error="";
+    }catch(Exception ex){Level=0;Available=false;Error=ex.Message;Release(meter);meter=null;Release(d);d=null;Release(e);e=null;id="";refresh=DateTime.MinValue;if(stop.WaitOne(1000))break;}
+   }}finally{Level=0;Available=false;Release(meter);Release(d);Release(e);stop.Dispose();}
+  }
+  public void Dispose(){try{stop.Set();}catch(ObjectDisposedException){} }
+ }
  [ComImport,Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class Enumerator {}
  [ComImport,Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] interface IDevices {
   void EnumAudioEndpoints(int flow,uint mask,out ICollection devices);void GetDefaultAudioEndpoint(int flow,int role,out IDevice device);void GetDevice([MarshalAs(UnmanagedType.LPWStr)]string id,out IDevice device);
