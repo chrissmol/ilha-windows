@@ -81,8 +81,7 @@ public partial class App {
  }
  static LinearGradientBrush glassBrush;
  static Color[] GlassColors(Nullable<Color> tint){
-  if(!tint.HasValue)return new Color[]{Color.FromArgb(0xC8,6,6,8),Color.FromArgb(0xBC,6,5,8),Color.FromArgb(0xC8,16,15,28)};
-  Color t=tint.Value;return new Color[]{Color.FromArgb(0xC0,(byte)(t.R*.18),(byte)(t.G*.18),(byte)(t.B*.18)),Color.FromArgb(0xB0,(byte)(t.R*.38),(byte)(t.G*.38),(byte)(t.B*.38)),Color.FromArgb(0xA6,(byte)(t.R*.85),(byte)(t.G*.85),(byte)(t.B*.85))};
+  Color black=Color.FromRgb(5,5,6);return new Color[]{black,black,black};
  }
  static LinearGradientBrush NeutralGlass(){
   Color[] c=GlassColors(null);glassBrush=new LinearGradientBrush(new GradientStopCollection{new GradientStop(c[0],0),new GradientStop(c[1],.5),new GradientStop(c[2],1)},90);return glassBrush;
