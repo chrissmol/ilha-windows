@@ -89,7 +89,7 @@ public partial class App {
      }
     }
    }catch(Exception ex){ok=false;try{File.WriteAllText(Path.Combine(dataDir,"painel-error.txt"),ex.ToString());}catch{}}
-   try{w.Dispatcher.BeginInvoke(new Action(()=>{painelBusy=false;if(ok&&data!=null)PainelSet(data);else painelState=2;if(painelState!=1)painelNext=DateTime.UtcNow.AddSeconds(30);if(page=="painel")Render();}));}catch{}
+   try{w.Dispatcher.BeginInvoke(new Action(()=>{painelBusy=false;if(ok&&data!=null)PainelSet(data);else painelState=2;if(painelState!=1)painelNext=DateTime.UtcNow.AddSeconds(30);if(On("geral")||On("uso"))Render();}));}catch{}
   }){IsBackground=true,Priority=System.Threading.ThreadPriority.BelowNormal};
   thread.Start();
  }

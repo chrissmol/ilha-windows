@@ -64,7 +64,7 @@ public partial class App {
     running=Convert.ToBoolean(d["running"]);remaining=Convert.ToDouble(d["remaining"]);end=new DateTime(Convert.ToInt64(d["end"]),DateTimeKind.Utc);doNotDisturb=Convert.ToBoolean(d["dnd"]);
     var list=new List<Dictionary<string,string>>();foreach(var o in (System.Collections.IEnumerable)d["conversation"]){var m=(Dictionary<string,object>)o;list.Add(new Dictionary<string,string>{{"role",""+m["role"]},{"content",""+m["content"]}});}
     conversation=list;syncStamp=stamp;syncSnap=Snap();
-    if((page=="robo"&&list.Count!=count)||(page=="focus"&&was!=running))Render();
+    if((On("chat")&&list.Count!=count)||(page=="focus"&&was!=running))Render();
    }else if(Snap()!=syncSnap){
     File.WriteAllText(path,json.Serialize(new Dictionary<string,object>{{"running",running},{"remaining",remaining},{"end",end.Ticks},{"dnd",doNotDisturb},{"conversation",conversation}}));syncStamp=File.GetLastWriteTimeUtc(path);syncSnap=Snap();
    }

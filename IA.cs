@@ -1,0 +1,45 @@
+using System;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+namespace Ilha {
+public partial class App {
+ // IA drawer: one place for every local AI (Claude Code, Codex, local model chat). Tabs reuse the former Claude, Robo and Painel IA pages.
+ static string iaTab="geral";
+ static bool On(string tab){return page=="ia"&&iaTab==tab;}
+ static void IAPage(){
+  var root=new Grid();root.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});root.RowDefinitions.Add(new RowDefinition());view.Children.Add(root);
+  var tabs=Stack(Orientation.Horizontal);tabs.Margin=new Thickness(0,0,0,6);
+  foreach(var t in new[]{new[]{"geral","Visão geral"},new[]{"uso","Uso"},new[]{"chat","Chat"}}){string id=t[0];var b=Btn(t[1],()=>{if(id==iaTab)return;if(On("chat")&&chatInput!=null)chatDraft=chatInput.Text;iaTab=id;Render();});if(id==iaTab)b.Background=B("#33FFFFFF");tabs.Children.Add(b);}
+  root.Children.Add(tabs);
+  var body=new Grid();Grid.SetRow(body,1);root.Children.Add(body);
+  var saved=view;view=body;
+  try{if(iaTab=="chat"){Robo();if(chatInput!=null)chatInput.Text=chatDraft;}else if(iaTab=="uso")PainelPage();else IAOverview();}finally{view=saved;}
+ }
+ static Border IACard(string title,string status,string statusColor,UIElement content,int column,int columns){
+  var stack=Stack();var head=T(title,9.5,"#AFA9B4");head.Margin=new Thickness(0,0,0,4);stack.Children.Add(head);
+  var s=T(status,15,statusColor);s.Margin=new Thickness(0,0,0,6);s.TextTrimming=TextTrimming.CharacterEllipsis;stack.Children.Add(s);if(content!=null)stack.Children.Add(content);
+  var card=new Border{Background=B("#16FFFFFF"),CornerRadius=new CornerRadius(14),Padding=new Thickness(11,9,11,9),Margin=new Thickness(column==0?0:4,0,column==columns-1?0:4,0),Child=stack};Grid.SetColumn(card,column);return card;
+ }
+ static void IAOverview(){
+  var cards=new System.Collections.Generic.List<Func<int,int,Border>>();
+  // Claude Code: always shown, because it is where the hooks (live session status) are connected.
+  cards.Add((c,n)=>{
+   var body=Stack();agentStatus=T("Aguardando conexão",12,"#E2D1C4");agentDetail=T("",10.5,"#BEB2AC");agentDetail.TextTrimming=TextTrimming.CharacterEllipsis;agentAge=T("",10,"#ADA099");
+   body.Children.Add(agentStatus);body.Children.Add(agentDetail);body.Children.Add(agentAge);
+   if(painel!=null&&PainelActive("claude")){body.Children.Add(new Border{Height=6});foreach(var l in PainelLimits().Where(r=>Convert.ToString(r["ia"])=="claude"))body.Children.Add(LimitRow(Convert.ToString(l["nome"]),Num(l["pct"])));}
+   var copy=Btn("Conectar sessão",()=>{Clipboard.SetText("claude --settings \""+System.IO.Path.Combine(baseDir,"claude-settings.json")+"\"");agentDetail.Text="Comando copiado. Execute no terminal do projeto.";},"Copiar comando de conexão");copy.HorizontalAlignment=HorizontalAlignment.Left;copy.Margin=new Thickness(-10,4,0,0);body.Children.Add(copy);
+   return IACard("CLAUDE CODE","✳  Claude","#FFB36B",body,c,n);});
+  if(painel!=null&&PainelActive("codex"))cards.Add((c,n)=>{
+   var body=Stack();foreach(var l in PainelLimits().Where(r=>Convert.ToString(r["ia"])=="codex"))body.Children.Add(LimitRow(Convert.ToString(l["nome"]),Num(l["pct"]),l.ContainsKey("reinicia")?Num(l["reinicia"]):0));
+   return IACard("CODEX","Em uso","#64D2FF",body,c,n);});
+  cards.Add((c,n)=>{
+   var body=Stack();var hint=T(String.IsNullOrEmpty(localModel)?"Escolha um modelo em Settings.":"Modelo: "+localModel,10.5,"#BDB4C7");hint.TextWrapping=TextWrapping.Wrap;body.Children.Add(hint);
+   var open=Btn("Conversar",()=>{iaTab="chat";Render();});open.HorizontalAlignment=HorizontalAlignment.Left;open.Margin=new Thickness(-10,6,0,0);body.Children.Add(open);
+   return IACard("IA LOCAL · ROBO",String.IsNullOrEmpty(localModel)?"Sem modelo":"Conectada",String.IsNullOrEmpty(localModel)?"#AFA9B4":"#30D158",body,c,n);});
+  var grid=new Grid();for(int i=0;i<cards.Count;i++){grid.ColumnDefinitions.Add(new ColumnDefinition());grid.Children.Add(cards[i](i,cards.Count));}
+  view.Children.Add(new ScrollViewer{Content=grid,VerticalScrollBarVisibility=ScrollBarVisibility.Auto});
+  UpdateAgent();UpdateDashboard();
+ }
+}
+}
