@@ -17,6 +17,35 @@ permissions:
   actions: read
 
 jobs:
+  motor:
+    # Real end-to-end check of the embedded AI: downloads engine + model, verifies hashes, starts llama-server, chats once.
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Compile
+        shell: powershell
+        run: .\Compilar.ps1
+      - name: Embedded AI end to end
+        shell: powershell
+        run: |
+          $root = (Get-Location).Path
+          $env:TITO_ROOT = $root
+          $runtime = Join-Path $root ([IO.File]::ReadAllText((Join-Path $root 'current-version.txt')).Trim())
+          $p = Start-Process -FilePath $runtime -ArgumentList '--motor-test' -WindowStyle Hidden -PassThru
+          if (-not $p.WaitForExit(1500000)) { $p.Kill(); throw 'motor-test timed out' }
+          Get-Content (Join-Path $root 'Dados\motor-test.txt')
+          if ($p.ExitCode -ne 0) { throw ('motor-test failed: ' + $p.ExitCode) }
+      - name: Report engine signature (Smart App Control notes)
+        if: always()
+        shell: powershell
+        run: |
+          Get-ChildItem Dados\motor -ErrorAction SilentlyContinue -Recurse -Filter 'llama-server.exe' | ForEach-Object {
+            $s = Get-AuthenticodeSignature $_.FullName
+            "$($_.FullName): $($s.Status) $($s.SignerCertificate.Subject)"
+          }
+          Get-ChildItem Dados\motor -ErrorAction SilentlyContinue -Recurse -File | Where-Object { $_.Extension -in '.exe','.dll' } | ForEach-Object { "$($_.Name) $((Get-AuthenticodeSignature $_.FullName).Status)" }
+
   build:
     runs-on: windows-2022
     steps:

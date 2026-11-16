@@ -44,9 +44,9 @@ public partial class App {
  }
  static void Robo(){
   var layout=new Grid();layout.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});layout.RowDefinitions.Add(new RowDefinition());layout.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});view.Children.Add(layout);
-  var chatHeader=new DockPanel{Margin=new Thickness(0,0,0,4)};chatHeader.Children.Add(T(String.IsNullOrEmpty(localModel)?"ROBO":"via "+localModel,9,"#AFA9B4"));var reset=Btn("New chat",()=>{if(!chatBusy){conversation.Clear();Switch("robo");}},"Nova conversa");reset.HorizontalAlignment=HorizontalAlignment.Right;reset.Padding=new Thickness(6,1,6,1);chatHeader.Children.Add(reset);layout.Children.Add(chatHeader);
+  var chatHeader=new DockPanel{Margin=new Thickness(0,0,0,4)};chatHeader.Children.Add(T("via "+MotorLabel(),9,"#AFA9B4"));var reset=Btn("New chat",()=>{if(!chatBusy){conversation.Clear();Switch("robo");}},"Nova conversa");reset.HorizontalAlignment=HorizontalAlignment.Right;reset.Padding=new Thickness(6,1,6,1);chatHeader.Children.Add(reset);layout.Children.Add(chatHeader);
   chatMessages=Stack();chatScroll=new ScrollViewer{Content=chatMessages,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};Grid.SetRow(chatScroll,1);layout.Children.Add(chatScroll);
-  if(conversation.Count==0){chatMessages.Children.Add(T("ROBO",9,"#C1B5CC"));var welcome=T("O que falta para hoje?",21);welcome.FontWeight=FontWeights.SemiBold;welcome.Margin=new Thickness(0,13,0,7);chatMessages.Children.Add(welcome);chatMessages.Children.Add(T(String.IsNullOrEmpty(localModel)?"Conecte uma IA local em Settings para conversar.":"IA local conectada · "+localModel,11,"#BDB4C7"));}else foreach(var message in conversation)AddChatBubble(message["content"],message["role"]=="user");
+  if(conversation.Count==0){chatMessages.Children.Add(T("ROBO",9,"#C1B5CC"));var welcome=T("O que falta para hoje?",21);welcome.FontWeight=FontWeights.SemiBold;welcome.Margin=new Thickness(0,13,0,7);chatMessages.Children.Add(welcome);chatMessages.Children.Add(T(MotorStatusText(),11,"#BDB4C7"));}else foreach(var message in conversation)AddChatBubble(message["content"],message["role"]=="user");
   var entry=new Grid{Margin=new Thickness(0,9,0,0)};entry.ColumnDefinitions.Add(new ColumnDefinition());entry.ColumnDefinitions.Add(new ColumnDefinition{Width=GridLength.Auto});Grid.SetRow(entry,2);layout.Children.Add(entry);
   chatInput=new TextBox{Background=Brushes.Transparent,Foreground=B("#F2ECE7"),BorderBrush=B("#25FFFFFF"),BorderThickness=new Thickness(0,0,0,1),Padding=new Thickness(0,5,8,5),FontSize=12,ToolTip="Mensagem para o Robo"};chatInput.KeyDown+=(s,e)=>{if(e.Key==Key.Enter){SendChat();e.Handled=true;}};entry.Children.Add(chatInput);
   var send=Btn("↑",SendChat,"Enviar");send.Width=29;send.Height=29;send.Padding=new Thickness(0);send.Background=B("#F5ECEA");send.Foreground=B("#28202E");Grid.SetColumn(send,1);entry.Children.Add(send);
@@ -62,16 +62,17 @@ public partial class App {
  }
  static async void SendChat(){
   if(chatBusy||chatInput==null||String.IsNullOrWhiteSpace(chatInput.Text))return;
-  if(String.IsNullOrEmpty(localModel)){Switch("settings");return;}
-  string message=chatInput.Text;chatInput.Clear();conversation.Add(new Dictionary<string,string>{{"role","user"},{"content",message}});AddChatBubble(message,true);chatBusy=true;
+    string message=chatInput.Text;chatInput.Clear();conversation.Add(new Dictionary<string,string>{{"role","user"},{"content",message}});AddChatBubble(message,true);chatBusy=true;
   try{var context=new List<Dictionary<string,string>>{new Dictionary<string,string>{{"role","system"},{"content","Você é Robo, um assistente de desktop. Responda em português de forma breve. Não invente acesso a tarefas, calendário ou arquivos. O timer está "+(running?"em andamento":"parado")+" e mostra "+Format(remaining)+". Você só conhece o que o usuário escreveu nesta conversa."}}};context.AddRange(conversation);
-   string payload=json.Serialize(new{model=localModel,messages=context,stream=false});string raw=await Task.Run(()=>LocalRequest("chat",payload));var response=json.Deserialize<Dictionary<string,object>>(raw);var answer=response["message"] as Dictionary<string,object>;string content=Convert.ToString(answer["content"]);conversation.Add(new Dictionary<string,string>{{"role","assistant"},{"content",content}});if(page=="robo")AddChatBubble(content,false);
-  }catch{if(page=="robo")AddChatBubble("Não consegui conectar à IA local. Confira o Ollama em Settings.",false);}finally{chatBusy=false;}
+   string content;if(IsOllama()){string payload=json.Serialize(new{model=OllamaName(),messages=context,stream=false});string raw=await Task.Run(()=>LocalRequest("chat",payload));var response=json.Deserialize<Dictionary<string,object>>(raw);var answer=response["message"] as Dictionary<string,object>;content=Convert.ToString(answer["content"]);}
+   else{MotorProgress+=MotorUi;MotorShowProgress(true);try{content=await MotorChat(context);}finally{MotorProgress-=MotorUi;MotorShowProgress(false);}}
+   conversation.Add(new Dictionary<string,string>{{"role","assistant"},{"content",content}});if(page=="robo")AddChatBubble(content,false);
+  }catch(Exception ex){var inner=ex is AggregateException&&ex.InnerException!=null?ex.InnerException:ex;if(page=="robo")AddChatBubble(inner is MotorException?inner.Message:IsOllama()?"Não consegui conectar ao Ollama. Confira se ele está aberto, ou escolha a IA embutida do Tito em Settings.":"Não consegui usar a IA embutida: "+inner.Message,false);}finally{chatBusy=false;}
  }
+ // Ollama is only an optional alternative: when it is running, its models are appended to the list.
  static async void DetectModels(){
-  modelStatus.Text="Procurando modelos locais…";
-  try{string raw=await Task.Run(()=>LocalRequest("tags"));var data=json.Deserialize<Dictionary<string,object>>(raw);var entries=(System.Collections.IEnumerable)data["models"];models.Items.Clear();foreach(Dictionary<string,object> entry in entries)models.Items.Add(Convert.ToString(entry["name"]));if(models.Items.Count>0){models.SelectedIndex=0;modelStatus.Text="IA local conectada. Abra Robo para conversar.";}else modelStatus.Text="Ollama está ativo, mas não há modelos instalados.";}
-  catch{if(modelStatus!=null)modelStatus.Text="Ollama não encontrado. Instale e abra o Ollama para conectar uma IA local.";}
+  try{string raw=await Task.Run(()=>LocalRequest("tags"));var data=json.Deserialize<Dictionary<string,object>>(raw);foreach(Dictionary<string,object> entry in (System.Collections.IEnumerable)data["models"]){if(models==null)return;string n=Convert.ToString(entry["name"]);models.Items.Add(new ComboBoxItem{Content="Ollama · "+n,Tag="ollama:"+n});if(IsOllama()&&OllamaName()==n)models.SelectedIndex=models.Items.Count-1;}}
+  catch{}
  }
 }
 }

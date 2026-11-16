@@ -17,7 +17,7 @@ Implemented in source:
 - Synced lyrics loaded from a user-selected `.lrc` file through the + menu. Lyrics stay associated with the current track.
 - Focus countdown with start, pause, reset and minute selection.
 - Claude Code event hooks enabled per session.
-- A Robo chat interface with an optional local Ollama connection.
+- A Robo chat interface with an embedded local AI (llama.cpp + a small GGUF model downloaded on first use; Ollama optional). See [docs/MOTOR_IA.md](docs/MOTOR_IA.md).
 - A tray menu with restart/update and shutdown controls.
 - A tool-window style that excludes the island from Alt+Tab.
 - Suppression during foreground full-screen applications, known game window classes and supported game installations, with an additional per-app hide list.
@@ -52,7 +52,7 @@ Builds are stored under `Versions/`. `Tito.exe` is a stable launcher that reads 
 
 **Claude Code:** use the Claude panel to copy a command that starts a Claude session with generated hooks. Existing global settings and approval decisions are preserved. The hook stores event names, tool names and file basenames locally.
 
-**Robo:** start Ollama on the same PC, then use Settings → Detectar modelos. The application connects only to `127.0.0.1:11434`. Any further network behavior depends on the model/server configured by the user.
+**Robo:** runs a local AI by itself. On first use it downloads the llama.cpp engine (~25 MB) and a model (1.1 or 2.1 GB) into `Dados\motor`, verified by SHA-256; chats stay on `127.0.0.1`. Ollama, if running, is offered as an alternative. Details and Smart App Control notes: [docs/MOTOR_IA.md](docs/MOTOR_IA.md).
 
 ## Privacy and uninstall
 
