@@ -63,7 +63,7 @@ public static class DesktopContext {
   CursorPoint point;if(!GetCursorPos(out point))return new Point();
   Rect rect;if(!GetWindowRect(new WindowInteropHelper(window).Handle,out rect))return new Point();
   double cx=(rect.Left+rect.Right)/2.0,cy=rect.Top+25*(rect.Bottom-rect.Top)/300.0;
-  return new Point(Math.Max(-2,Math.Min(2,(point.X-cx)/180)),Math.Max(-1,Math.Min(1,(point.Y-cy)/180)));
+  return new Point(2.6*Math.Tanh((point.X-cx)/260.0),1.4*Math.Tanh((point.Y-cy)/160.0));
  }
 }
 public partial class App {
@@ -105,8 +105,19 @@ public partial class App {
  }
  static void SpawnOtherIslands(){var screens=System.Windows.Forms.Screen.AllScreens;string exe=Process.GetCurrentProcess().MainModule.FileName;for(int i=0;i<screens.Length;i++)if(i!=selectedMonitor)try{Process.Start(new ProcessStartInfo(exe,"--monitor "+i+" --owner "+Process.GetCurrentProcess().Id){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=baseDir});}catch{}}
 
+ static DateTime lastGazeTick=DateTime.UtcNow;static Point gazeNow;
+ static void GazeTick(){
+  var now=DateTime.UtcNow;double dt=Math.Min(.1,(now-lastGazeTick).TotalSeconds);lastGazeTick=now;
+  var m=opened?headerMascot:mascot;var other=opened?mascot:headerMascot;if(m==null)return;
+  if(other!=null&&(other.GazeX!=0||other.GazeY!=0)){other.GazeX=0;other.GazeY=0;other.InvalidateVisual();}
+  Point target=DesktopContext.Gaze(w);if((target-lastGaze).Length>.05){gazeUntil=now.AddMilliseconds(1600);lastGaze=target;}
+  if(now>gazeUntil)target=new Point();if(now<quirkUntil)target=quirkGaze;
+  double k=1-Math.Exp(-dt/(target.X!=0||target.Y!=0?.07:.24));var next=new Point(gazeNow.X+(target.X-gazeNow.X)*k,gazeNow.Y+(target.Y-gazeNow.Y)*k);
+  if((next-gazeNow).Length>.004){gazeNow=next;m.GazeX=next.X;m.GazeY=next.Y;m.InvalidateVisual();}
+ }
  static void HoverTick(){
   if(uiTest||contextHidden||!w.IsVisible)return;
+  GazeTick();
   double tw=opened?600:(compactWide?compactWidth:128),th=opened?270:34;bool inside=DesktopContext.CursorInside(w,tw,th,opened?2:0);
   if(opened){if(!inside&&System.Windows.Input.Mouse.Captured==null&&!dropHover)Expand(false);}else if(inside&&!doNotDisturb)Expand(true);
  }
@@ -118,7 +129,7 @@ public partial class App {
   else if(!suppress&&contextHidden){contextHidden=false;SetPose(false,false);w.Show();}
   if(openSignal!=null&&openSignal.WaitOne(0)&&!contextHidden){w.Show();Expand(true);}
   if(!opened&&mascot!=null&&!contextHidden){
-   Point gaze=DesktopContext.Gaze(w);if((gaze-lastGaze).Length>.06){gazeUntil=DateTime.UtcNow.AddMilliseconds(1300);lastGaze=gaze;}if(DateTime.UtcNow>gazeUntil)gaze=new Point();if(DateTime.UtcNow<quirkUntil)gaze=quirkGaze;mascot.GazeX+=(gaze.X-mascot.GazeX)*.35;mascot.GazeY+=(gaze.Y-mascot.GazeY)*.35;mascot.InvalidateVisual();
+   
    if(DateTime.UtcNow>=nextQuirk){nextQuirk=DateTime.UtcNow.AddSeconds(14+random.NextDouble()*16);if(mascot.Mood=="idle"){int q=random.Next(3);if(q==0)winkUntil=DateTime.UtcNow.AddMilliseconds(800);else if(q==1){quirkGaze=new Point(random.Next(2)==0?-2:2,0);quirkUntil=DateTime.UtcNow.AddMilliseconds(1300);}else mascot.Hop(1);}}
    if(DateTime.UtcNow>=nextBlink){mascot.BlinkOnce();nextBlink=DateTime.UtcNow.AddSeconds(3+random.NextDouble()*4);}
   }
