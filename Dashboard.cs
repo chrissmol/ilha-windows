@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net;
 using System.Linq;
@@ -39,7 +39,7 @@ public partial class App {
  static void UpdateDashboard(){
   if(page!="home"||dashTrack==null)return;
   dashTrack.Text=media.available&&!String.IsNullOrWhiteSpace(media.title)?media.title:"Nenhuma mídia";dashArtist.Text=media.available?(media.artist??""):"Abra seu player";dashPlay.Content=TransportIcon(media.playing?"pause":"play",true);dashTimer.Text=Format(Math.Ceiling(remaining));dashReady.Text=running?"Running":"Ready";dashStart.Content=TransportIcon(running?"pause":"play",true);
-  string cover=media.available?(media.cover??""):"";if(cover!=dashCover){dashCover=cover;dashImage.Source=null;try{if(File.Exists(cover)){var bmp=new BitmapImage();bmp.BeginInit();bmp.CacheOption=BitmapCacheOption.OnLoad;bmp.DecodePixelWidth=500;bmp.UriSource=new Uri(cover);bmp.EndInit();bmp.Freeze();dashImage.Source=bmp;Tint(bmp);}}catch{}}
+  string cover=media.available?(media.cover??""):"";if(cover!=dashCover){dashCover=cover;dashImage.Source=null;try{if(File.Exists(cover)){var bmp=new BitmapImage();bmp.BeginInit();bmp.CacheOption=BitmapCacheOption.OnLoad;bmp.DecodePixelWidth=1200;bmp.UriSource=new Uri(cover);bmp.EndInit();bmp.Freeze();dashImage.Source=bmp;Tint(bmp);}}catch{}}
   try{string path=System.IO.Path.Combine(dataDir,"agent.json");if(File.Exists(path)){var e=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(path));dashAgent.Text=e["event"]=="Stop"?"Concluído":e["event"]=="SessionEnd"?"Encerrado":"Conectado";dashCount.Text=e["event"]=="SessionEnd"?"0":"1";}else{dashCount.Text="0";dashAgent.Text="Sem sessão";}}catch{}
  }
  static void Robo(){
@@ -71,7 +71,7 @@ public partial class App {
  static void Settings(){
   var settings=Stack();var scroll=new ScrollViewer{Content=settings,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};view.Children.Add(scroll);settings.Children.Add(T("Settings",23));
   var controls=Stack(Orientation.Horizontal);controls.Children.Add(Btn(doNotDisturb?"Não incomodar · ativo":"Não incomodar",()=>{doNotDisturb=!doNotDisturb;Switch("settings");}));controls.Children.Add(Btn("Prateleira",()=>Switch("shelf")));controls.Children.Add(Btn("Áudio",()=>Switch("audio")));settings.Children.Add(controls);
-  var monitors=new ComboBox{Width=290,Margin=new Thickness(0,7,0,7),HorizontalAlignment=HorizontalAlignment.Left};var screens=System.Windows.Forms.Screen.AllScreens;for(int i=0;i<screens.Length;i++)monitors.Items.Add("Monitor "+(i+1)+(screens[i].Primary?" · principal":""));monitors.SelectedIndex=Math.Min(selectedMonitor,screens.Length-1);monitors.SelectionChanged+=(s,e)=>{selectedMonitor=monitors.SelectedIndex;SetPose(opened,false);};settings.Children.Add(monitors);
+  var monitors=T("Uma Ilha em cada monitor · some só onde há tela cheia",10,"#AFA9B4");monitors.Margin=new Thickness(0,7,0,7);settings.Children.Add(monitors);
   var desc=T("Robo · IA local",12,"#E3D9E8");desc.Margin=new Thickness(0,8,0,5);settings.Children.Add(desc);
   var row=Stack(Orientation.Horizontal);models=new ComboBox{Width=240,Height=27,Margin=new Thickness(0,0,6,0)};if(!String.IsNullOrEmpty(localModel)){models.Items.Add(localModel);models.SelectedIndex=0;}models.SelectionChanged+=(s,e)=>{if(models.SelectedItem!=null){localModel=models.SelectedItem.ToString();File.WriteAllText(System.IO.Path.Combine(dataDir,"model.txt"),localModel);}};row.Children.Add(models);row.Children.Add(Btn("Detectar modelos",DetectModels));settings.Children.Add(row);
   modelStatus=T("Requer Ollama em execução neste PC. Conexão com localhost.",10,"#B9ADB9");modelStatus.TextWrapping=TextWrapping.Wrap;modelStatus.Margin=new Thickness(0,6,0,7);settings.Children.Add(modelStatus);

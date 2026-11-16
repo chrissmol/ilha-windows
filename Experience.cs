@@ -19,8 +19,10 @@ public partial class App {
  static void SetupExperience(){
   if(!uiTest){outputMeter=new DesktopAudio.PeakMonitor();waveTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(50)};waveTimer.Tick+=(s,e)=>{bool active=!contextHidden&&(page=="music"||(!opened&&media.playing));outputMeter.Enabled=active;bool visible=page=="music"||(!opened&&media.playing);mascot.MediaMode=visible;mascot.ToolTip=visible?(outputMeter.Available?"Nível real da saída padrão · mistura de todos os aplicativos":"Medição de áudio indisponível · "+outputMeter.Error):"Ilha";if(headerMascot!=null)headerMascot.MediaMode=page=="music";double peak=active&&outputMeter.Available?outputMeter.Level:0;mascot.AudioPeak(peak);if(headerMascot!=null)headerMascot.AudioPeak(peak);};waveTimer.Start();w.Closed+=(s,e)=>{waveTimer.Stop();outputMeter.Dispose();};}
   w.PreviewMouseMove+=(s,e)=>lastMascotInteraction=DateTime.UtcNow;w.PreviewKeyDown+=(s,e)=>lastMascotInteraction=DateTime.UtcNow;
-  try{string path=Path.Combine(dataDir,"experience.json");if(File.Exists(path)){var prefs=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(path));if(prefs.ContainsKey("monitor"))selectedMonitor=Convert.ToInt32(prefs["monitor"]);if(prefs.ContainsKey("quiet"))doNotDisturb=Convert.ToBoolean(prefs["quiet"]);}string source=Path.Combine(dataDir,"media-source.txt");if(File.Exists(source))selectedSource=File.ReadAllText(source).Trim();}catch{}
-  w.Closed+=(s,e)=>File.WriteAllText(Path.Combine(dataDir,"experience.json"),json.Serialize(new{monitor=selectedMonitor,quiet=doNotDisturb}));
+  if(!secondary)try{File.Delete(SharedPath());}catch{}
+  if(!secondary)selectedMonitor=Math.Max(0,Array.FindIndex(System.Windows.Forms.Screen.AllScreens,x=>x.Primary));
+  try{string path=Path.Combine(dataDir,"experience.json");if(File.Exists(path)){var prefs=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(path));if(prefs.ContainsKey("quiet"))doNotDisturb=Convert.ToBoolean(prefs["quiet"]);}string source=Path.Combine(dataDir,"media-source.txt");if(File.Exists(source))selectedSource=File.ReadAllText(source).Trim();}catch{}
+  w.Closed+=(s,e)=>{if(!secondary)File.WriteAllText(Path.Combine(dataDir,"experience.json"),json.Serialize(new{monitor=selectedMonitor,quiet=doNotDisturb}));};
   var face=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};
   mascot.HorizontalAlignment=HorizontalAlignment.Center;restingShell.Child=null;face.Children.Add(mascot);compactStatus=T("",12);compactStatus.Margin=new Thickness(8,0,0,0);compactStatus.Visibility=Visibility.Collapsed;face.Children.Add(compactStatus);restingShell.Child=face;
   w.AllowDrop=true;w.PreviewDragOver+=(s,e)=>{bool valid=e.Data.GetDataPresent(DataFormats.FileDrop)||e.Data.GetDataPresent(DataFormats.UnicodeText)||e.Data.GetDataPresent(DataFormats.Bitmap);e.Effects=valid?DragDropEffects.Copy:DragDropEffects.None;e.Handled=true;if(valid){dropHover=true;leaveTimer.Stop();if(page!="shelf")Switch("shelf");if(!opened)Expand(true);}};
@@ -50,7 +52,25 @@ public partial class App {
  static void SourceMenu(){var menu=new ContextMenu();var automatic=new MenuItem{Header="Automático",IsCheckable=true,IsChecked=String.IsNullOrEmpty(selectedSource)};automatic.Click+=(s,e)=>SelectSource("");menu.Items.Add(automatic);foreach(var source in media.sessions??new MediaSource[0]){var entry=source;var item=new MenuItem{Header=(entry.playing?"▶ ":"")+(entry.title??"Mídia")+" · "+entry.source,IsCheckable=true,IsChecked=selectedSource==entry.source};item.Click+=(s,e)=>SelectSource(entry.source);menu.Items.Add(item);}menu.IsOpen=true;}
  static string selectedSource="";static string chatDraft="";
  static void SelectSource(string source){selectedSource=source;File.WriteAllText(Path.Combine(dataDir,"media-source.txt"),source);}
+ static string syncSnap="";static DateTime syncStamp=DateTime.MinValue;
+ static string SharedPath(){return Path.Combine(dataDir,"shared.json");}
+ static string Snap(){return running+"|"+(running?end.Ticks:(long)Math.Round(remaining))+"|"+doNotDisturb+"|"+conversation.Count+"|"+(conversation.Count>0?conversation[conversation.Count-1]["content"].GetHashCode():0);}
+ static void SyncTick(){
+  try{
+   string path=SharedPath();DateTime stamp=File.Exists(path)?File.GetLastWriteTimeUtc(path):DateTime.MinValue;
+   if(stamp!=syncStamp&&stamp!=DateTime.MinValue){
+    var d=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(path));bool was=running;int count=conversation.Count;
+    running=Convert.ToBoolean(d["running"]);remaining=Convert.ToDouble(d["remaining"]);end=new DateTime(Convert.ToInt64(d["end"]),DateTimeKind.Utc);doNotDisturb=Convert.ToBoolean(d["dnd"]);
+    var list=new List<Dictionary<string,string>>();foreach(var o in (System.Collections.IEnumerable)d["conversation"]){var m=(Dictionary<string,object>)o;list.Add(new Dictionary<string,string>{{"role",""+m["role"]},{"content",""+m["content"]}});}
+    conversation=list;syncStamp=stamp;syncSnap=Snap();
+    if((page=="robo"&&list.Count!=count)||(page=="focus"&&was!=running))Render();
+   }else if(Snap()!=syncSnap){
+    File.WriteAllText(path,json.Serialize(new Dictionary<string,object>{{"running",running},{"remaining",remaining},{"end",end.Ticks},{"dnd",doNotDisturb},{"conversation",conversation}}));syncStamp=File.GetLastWriteTimeUtc(path);syncSnap=Snap();
+   }
+  }catch{}
+ }
  static void ExperienceTick(){
+  SyncTick();
   if(focusWasRunning&&!running&&remaining<=0)celebrateUntil=DateTime.UtcNow.AddSeconds(8);focusWasRunning=running;
   bool removed=shelf.RemoveAll(x=>DateTime.UtcNow-x.Added>TimeSpan.FromHours(1))>0;if(removed&&page=="shelf")Switch("shelf");
   if(mediaWasPlaying&&!media.playing)celebrateUntil=DateTime.UtcNow.AddSeconds(1);mediaWasPlaying=media.playing;
