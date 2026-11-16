@@ -103,7 +103,6 @@ public partial class App {
   restartSignal=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.AutoReset,"Local\\TitoGlassRestart"+suffix);
   if(!secondary)File.WriteAllLines(System.IO.Path.Combine(dataDir,"active.txt"),new[]{Process.GetCurrentProcess().Id.ToString(),Process.GetCurrentProcess().MainModule.FileName});
  }
- static void SpawnOtherIslands(){var screens=System.Windows.Forms.Screen.AllScreens;string exe=Process.GetCurrentProcess().MainModule.FileName;for(int i=0;i<screens.Length;i++)if(i!=selectedMonitor)try{Process.Start(new ProcessStartInfo(exe,"--monitor "+i+" --owner "+Process.GetCurrentProcess().Id){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=baseDir});}catch{}}
 
  static DateTime lastGazeTick=DateTime.UtcNow;static Point gazeNow;
  static void GazeTick(){
@@ -122,6 +121,7 @@ public partial class App {
   if(opened){if(!inside&&System.Windows.Input.Mouse.Captured==null&&!dropHover)Expand(false);}else if(inside&&!doNotDisturb)Expand(true);
  }
  static void PresenceTick(){
+  SyncFullscreenHide();
   if(secondary&&ownerProc!=null&&ownerProc.HasExited){w.Close();return;}
   if(restartSignal!=null&&restartSignal.WaitOne(0)){w.Close();return;}
   bool suppress=autoHideContext&&DesktopContext.Suppress(new WindowInteropHelper(w).Handle,hiddenApps);
