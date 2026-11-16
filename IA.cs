@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-namespace Ilha {
+namespace Tito {
 public partial class App {
  // IA drawer: one place for every local AI (Claude Code, Codex, local model chat). Tabs reuse the former Claude, Robo and Painel IA pages.
  static string iaTab="geral";
