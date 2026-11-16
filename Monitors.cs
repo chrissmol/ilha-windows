@@ -9,7 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using Forms=System.Windows.Forms;
-namespace Ilha {
+namespace Tito {
 public partial class App {
  // Multi-monitor control: one island per screen (a process each). Turn screens on/off, follow plug/unplug, open the island on the screen under the mouse with Ctrl+Alt+T.
  static Dictionary<int,Process> spawned=new Dictionary<int,Process>();static DispatcherTimer displayTimer;
@@ -25,7 +25,7 @@ public partial class App {
   for(int i=0;i<screens.Length;i++){
    if(i==selectedMonitor)continue;
    Process p;spawned.TryGetValue(i,out p);bool running=p!=null&&!p.HasExited;
-   if(off.Contains(i)){if(running)SignalIsland("IlhaGlassRestart","m"+i);}
+   if(off.Contains(i)){if(running)SignalIsland("TitoGlassRestart","m"+i);}
    else if(!running)try{spawned[i]=Process.Start(new ProcessStartInfo(exe,"--monitor "+i+" --owner "+Process.GetCurrentProcess().Id){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=baseDir});}catch{}
   }
  }
@@ -56,7 +56,7 @@ public partial class App {
   if(secondary)return;
   var helper=new WindowInteropHelper(w);IntPtr hwnd=helper.EnsureHandle();
   HwndSource.FromHwnd(hwnd).AddHook((IntPtr h,int msg,IntPtr wp,IntPtr lp,ref bool handled)=>{
-   if(msg==0x312&&wp.ToInt32()==0x7157){handled=true;var screens=Forms.Screen.AllScreens;int i=Array.IndexOf(screens,Forms.Screen.FromPoint(Forms.Cursor.Position));SignalIsland("IlhaGlassOpen",i<0||i==selectedMonitor?"":"m"+i);}
+   if(msg==0x312&&wp.ToInt32()==0x7157){handled=true;var screens=Forms.Screen.AllScreens;int i=Array.IndexOf(screens,Forms.Screen.FromPoint(Forms.Cursor.Position));SignalIsland("TitoGlassOpen",i<0||i==selectedMonitor?"":"m"+i);}
    return IntPtr.Zero;});
   RegisterHotKey(hwnd,0x7157,0x3|0x4000,0x54); // Ctrl+Alt+T
   w.Closed+=(s,e)=>UnregisterHotKey(hwnd,0x7157);
