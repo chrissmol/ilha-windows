@@ -47,8 +47,8 @@ public partial class App {
  }
  static void SystemMusic(){
   if(!useSystem){LocalMusic();return;}
-  var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(264)});grid.ColumnDefinitions.Add(new ColumnDefinition());view.Children.Add(grid);albumImage=backgroundArtwork;
-  var sources=Btn("Origem ▾",SourceMenu,"Escolher aplicativo de mídia");sources.HorizontalAlignment=HorizontalAlignment.Left;sources.VerticalAlignment=VerticalAlignment.Bottom;grid.Children.Add(sources);
+  var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(196)});grid.ColumnDefinitions.Add(new ColumnDefinition());view.Children.Add(grid);coverImage=new Image{Stretch=Stretch.UniformToFill,Clip=new RectangleGeometry(new Rect(0,0,176,176),20,20)};albumImage=coverImage;coverCard=new Border{Width=176,Height=176,HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(2,0,0,0),Child=coverImage,Effect=new System.Windows.Media.Effects.DropShadowEffect{BlurRadius=28,ShadowDepth=6,Direction=270,Opacity=.55,Color=Colors.Black}};grid.Children.Add(coverCard);
+  var sources=Btn("Origem ▾",SourceMenu,"Escolher aplicativo de mídia");sources.HorizontalAlignment=HorizontalAlignment.Left;sources.VerticalAlignment=VerticalAlignment.Bottom;sources.Margin=new Thickness(10,0,0,8);sources.Background=B("#A6000000");grid.Children.Add(sources);
   var info=new Grid();Grid.SetColumn(info,1);grid.Children.Add(info);
   mediaArtist=T("",10,"#CFC8C2");mediaArtist.VerticalAlignment=VerticalAlignment.Top;mediaArtist.TextTrimming=TextTrimming.CharacterEllipsis;info.Children.Add(mediaArtist);
   var words=new Grid{Height=100,Margin=new Thickness(0,17,0,0),VerticalAlignment=VerticalAlignment.Top,ClipToBounds=true};words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(20)});words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(58)});words.RowDefinitions.Add(new RowDefinition{Height=new GridLength(20)});info.Children.Add(words);
@@ -66,15 +66,15 @@ public partial class App {
   systemPlay=Btn("",()=>SendMedia("toggle"),"Reproduzir / pausar");systemPlay.Background=B("#F9F2E9");systemPlay.Width=30;systemPlay.Height=30;systemPlay.Padding=new Thickness(0);RoundTransport(systemPlay);transport.Children.Add(systemPlay);
   systemNext=Btn("",()=>SendMedia("next"),"Próxima");systemNext.Content=TransportIcon("next");transport.Children.Add(systemNext);info.Children.Add(transport);lastCover="";UpdateSystemMusic();UpdateLyrics();
  }
- static TextBlock mediaDuration;
+ static TextBlock mediaDuration;static Image coverImage;static Border coverCard;
  static void UpdateSystemMusic(){
   if(page!="music"||!useSystem||mediaArtist==null)return;
 
-  mediaArtist.Text=media.available?(media.title??"")+" · "+(media.artist??""):"MÍDIA";
+  mediaArtist.Text=media.available?(media.playing?"TOCANDO":"PAUSADO")+" · "+(String.IsNullOrWhiteSpace(media.album)?(media.source??""):media.album).ToUpperInvariant():"MÍDIA";mediaArtist.Foreground=glassTint.HasValue?new SolidColorBrush(glassTint.Value):B("#CFC8C2");mediaArtist.FontWeight=FontWeights.SemiBold;coverCard.Opacity=media.playing?1:.6;
   mediaHint.Text=media.available?(media.album??media.source??""):media.artist??"Reproduza áudio ou vídeo em um aplicativo ou navegador compatível.";
   mediaHint.ToolTip=media.error;systemPlay.Content=TransportIcon(media.playing?"pause":"play",true);systemPlay.IsEnabled=media.available&&media.canToggle;systemNext.IsEnabled=media.available&&media.canNext;systemPrevious.IsEnabled=media.available&&media.canPrevious;systemSeek.IsEnabled=media.available&&media.canSeek&&media.duration>0;
   double position=MediaPosition();elapsed.Text=Format(position);mediaDuration.Text="−"+Format(media.duration-position);if(!seeking)systemSeek.Value=media.duration>0?Math.Max(0,Math.Min(100,position/media.duration*100)):0;
-  string cover=media.available?(media.cover??""):"";if(cover!=lastCover){lastCover=cover;albumImage.Source=Landscape();GlassTint(null);try{if(File.Exists(cover)){var bmp=new BitmapImage();bmp.BeginInit();bmp.CacheOption=BitmapCacheOption.OnLoad;bmp.DecodePixelWidth=1200;bmp.UriSource=new Uri(cover);bmp.EndInit();bmp.Freeze();albumImage.Source=bmp;Tint(bmp);}}catch{}}
+  string cover=media.available?(media.cover??""):"";if(cover!=lastCover){lastCover=cover;albumImage.Source=Landscape();backgroundArtwork.Source=Landscape();GlassTint(null);try{if(File.Exists(cover)){var bmp=new BitmapImage();bmp.BeginInit();bmp.CacheOption=BitmapCacheOption.OnLoad;bmp.DecodePixelWidth=480;bmp.UriSource=new Uri(cover);bmp.EndInit();bmp.Freeze();albumImage.Source=bmp;var tiny=new BitmapImage();tiny.BeginInit();tiny.CacheOption=BitmapCacheOption.OnLoad;tiny.DecodePixelWidth=32;tiny.UriSource=new Uri(cover);tiny.EndInit();tiny.Freeze();backgroundArtwork.Source=tiny;Tint(bmp);}}catch{}}
  }
  static void Tint(BitmapSource source){
   var small=new TransformedBitmap(source,new ScaleTransform(24.0/source.PixelWidth,24.0/source.PixelHeight));var rgba=new FormatConvertedBitmap(small,PixelFormats.Bgra32,null,0);int stride=rgba.PixelWidth*4;var pixels=new byte[stride*rgba.PixelHeight];rgba.CopyPixels(pixels,stride,0);long r=0,g=0,b=0,total=0;for(int i=0;i<pixels.Length;i+=4){int weight=Math.Max(1,Math.Max(pixels[i],Math.Max(pixels[i+1],pixels[i+2]))-Math.Min(pixels[i],Math.Min(pixels[i+1],pixels[i+2])));r+=pixels[i+2]*weight;g+=pixels[i+1]*weight;b+=pixels[i]*weight;total+=weight;}Color c=Color.FromArgb(255,(byte)(r/total),(byte)(g/total),(byte)(b/total));

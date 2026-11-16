@@ -67,6 +67,7 @@ public partial class App {
   string current=has?(index>=0?lyrics[index].Text:lyrics[0].Text):(String.IsNullOrWhiteSpace(media.title)?"Nada tocando agora":media.title);
   lyricBefore.Text=has&&index>0?lyrics[index-1].Text:"";
   lyricAfter.Text=has&&index>=0&&index+1<lyrics.Count?lyrics[index+1].Text:has?"":media.artist??"";
+  lyricAfter.Foreground=has||!glassTint.HasValue?B("#88DAD1C9"):new SolidColorBrush(glassTint.Value);lyricAfter.FontWeight=has?FontWeights.Normal:FontWeights.SemiBold;
   lyricCurrent.Text=current;
   if(displayedLyric!=current){displayedLyric=current;lyricCurrent.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(.45,1,TimeSpan.FromMilliseconds(200)));}
  }
