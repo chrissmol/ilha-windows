@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-namespace Ilha {
+namespace Tito {
 // Core Audio COM contracts. Objects are scoped to each operation so changing
 // the default endpoint or unplugging a device never leaves a cached endpoint.
 public static class DesktopAudio {
@@ -11,7 +11,7 @@ public static class DesktopAudio {
  public sealed class PeakMonitor : IDisposable {
   public volatile float Level;public volatile bool Available,Enabled;public string Error="";
   readonly System.Threading.ManualResetEvent stop=new System.Threading.ManualResetEvent(false);readonly System.Threading.Thread worker;
-  public PeakMonitor(){worker=new System.Threading.Thread(Read){IsBackground=true,Name="Ilha output meter"};worker.SetApartmentState(System.Threading.ApartmentState.MTA);worker.Start();}
+  public PeakMonitor(){worker=new System.Threading.Thread(Read){IsBackground=true,Name="Tito output meter"};worker.SetApartmentState(System.Threading.ApartmentState.MTA);worker.Start();}
   void Read(){IDevices e=null;IDevice d=null;object meter=null;string id="";DateTime refresh=DateTime.MinValue;
    try{while(!stop.WaitOne(50)){
     if(!Enabled){Level=0;continue;}
