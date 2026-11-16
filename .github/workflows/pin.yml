@@ -10,10 +10,10 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
-          $r=Invoke-RestMethod https://api.github.com/repos/ggml-org/llama.cpp/releases/latest -Headers @{'User-Agent'='x'}
-          "TAG $($r.tag_name)"
-          $r.assets | ? {$_.name -like '*win*'} | % { "ASSET $($_.name) $($_.size) $($_.digest) $($_.browser_download_url)" }
+          $rs=Invoke-RestMethod 'https://api.github.com/repos/ggml-org/llama.cpp/releases?per_page=4' -Headers @{'User-Agent'='x'}
+          foreach($r in $rs){ "TAG $($r.tag_name) $($r.published_at)"; $r.assets | % { "ASSET $($_.name) $($_.size) $($_.digest) $($_.browser_download_url)" } }
           foreach($m in 'Qwen/Qwen2.5-1.5B-Instruct-GGUF','Qwen/Qwen2.5-3B-Instruct-GGUF'){
             $t=Invoke-RestMethod "https://huggingface.co/api/models/$m/tree/main"
             $t | ? {$_.path -like '*q4_k_m.gguf'} | % { "MODEL $m $($_.path) $($_.size) $($_.lfs.oid)" }
           }
+# rerun
