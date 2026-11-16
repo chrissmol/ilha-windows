@@ -44,7 +44,7 @@ public partial class App {
     switch(phase++){
      case 0: SetPose(false,false);if(opened||w.ShowInTaskbar)throw new Exception("Initial resting/switcher state");Expand(true);break;
      case 1: if(!opened||Math.Abs(islandClip.Rect.Width-600)>1||Math.Abs(islandClip.Rect.Height-270)>1)throw new Exception("Expansion did not finish");Expand(false);break;
-     case 2: if(opened||Math.Abs(islandClip.Rect.Width-128)>1||Math.Abs(islandClip.Rect.Height-34)>1)throw new Exception("Collapse did not finish");w.Hide();break;
+     case 2: if(opened||Math.Abs(islandClip.Rect.Width-(compactWide?compactWidth:128))>1||Math.Abs(islandClip.Rect.Height-34)>1)throw new Exception("Collapse did not finish");w.Hide();break;
      case 3: if(w.IsVisible)throw new Exception("Hide did not suppress the window");w.Show();Expand(true);Expand(false);Expand(true);break;
      case 4:
       if(!w.IsVisible||!opened||Math.Abs(islandClip.Rect.Width-600)>1||restingShell.Visibility!=Visibility.Collapsed)throw new Exception("Restore or interrupted transition failed");

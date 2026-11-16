@@ -10,6 +10,18 @@ namespace Ilha {
 public partial class App {
  // Notes, clipboard history and a local agenda. Nothing here leaves the machine.
  static readonly List<string> clipItems=new List<string>();static string lastClip="";static TextBox notesBox;
+ [System.Runtime.InteropServices.DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint flags);
+ static bool keepAwake;static DateTime curiousUntil,typingUntil;
+ static void SetKeepAwake(bool on){keepAwake=on;SetThreadExecutionState(on?0x80000003u:0x80000000u);}
+ // Resting-pill battery: only when charging or low; desktops without a battery return null.
+ static string BatteryText(out string color){
+  color=null;var ps=System.Windows.Forms.SystemInformation.PowerStatus;
+  if((ps.BatteryChargeStatus&(System.Windows.Forms.BatteryChargeStatus.NoSystemBattery|System.Windows.Forms.BatteryChargeStatus.Unknown))!=0)return null;
+  int pct=(int)Math.Round(ps.BatteryLifePercent*100);bool charging=ps.PowerLineStatus==System.Windows.Forms.PowerLineStatus.Online;
+  if(charging&&pct<100){color="#30D158";return "⚡ "+pct+"%";}
+  if(!charging&&pct<=30){color=pct<=20?"#FF453A":"#FFB000";return pct+"%";}
+  return null;
+ }
  static string NotesPath(){return Path.Combine(dataDir,"notes.txt");}
  static string AgendaPath(){return Path.Combine(dataDir,"agenda.txt");}
  [System.Runtime.InteropServices.DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();static uint clipSeq;
@@ -18,7 +30,7 @@ public partial class App {
   try{
    if(!Clipboard.ContainsText()||Clipboard.ContainsData("ExcludeClipboardContentFromMonitorProcessing"))return;
    string text=Clipboard.GetText();if(String.IsNullOrWhiteSpace(text)||text==lastClip||text.Length>2000)return;
-   lastClip=text;clipItems.Remove(text);clipItems.Insert(0,text);if(clipItems.Count>15)clipItems.RemoveAt(15);if(page=="clipboard")Switch("clipboard");
+   curiousUntil=DateTime.UtcNow.AddMilliseconds(1500);lastClip=text;clipItems.Remove(text);clipItems.Insert(0,text);if(clipItems.Count>15)clipItems.RemoveAt(15);if(page=="clipboard")Switch("clipboard");
   }catch{}
  }
  static StackPanel Panel(string title,out ScrollViewer scroll,Button action=null){
@@ -30,7 +42,7 @@ public partial class App {
   ScrollViewer sc;var rows=Panel("Notas",out sc);
   string saved="";try{if(File.Exists(NotesPath()))saved=File.ReadAllText(NotesPath());}catch{}
   notesBox=new TextBox{Text=saved,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Background=B("#18FFFFFF"),Foreground=B("#FFF8F6"),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(10),FontSize=13,MinHeight=130,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
-  notesBox.TextChanged+=(s,e)=>{try{File.WriteAllText(NotesPath(),notesBox.Text);}catch{}};rows.Children.Add(notesBox);
+  notesBox.TextChanged+=(s,e)=>{typingUntil=DateTime.UtcNow.AddSeconds(3);try{File.WriteAllText(NotesPath(),notesBox.Text);}catch{}};rows.Children.Add(notesBox);
  }
  static void ClipboardPage(){
   ScrollViewer sc;var rows=Panel("Área de transferência",out sc,Btn("Limpar",()=>{clipItems.Clear();Switch("clipboard");}));
@@ -47,7 +59,7 @@ public partial class App {
   add.KeyDown+=(s,e)=>{if(e.Key!=System.Windows.Input.Key.Enter||String.IsNullOrWhiteSpace(add.Text))return;
    var m=System.Text.RegularExpressions.Regex.Match(add.Text.Trim(),@"^(?:(\d{4}-\d{2}-\d{2})\s+)?(\d{1,2}:\d{2})\s+(.+)$");if(!m.Success){add.ToolTip="Use: HH:mm título";return;}
    string date=m.Groups[1].Success?m.Groups[1].Value:DateTime.Now.ToString("yyyy-MM-dd");string time=m.Groups[2].Value.PadLeft(5,'0');
-   try{File.AppendAllText(AgendaPath(),date+"|"+time+"|"+m.Groups[3].Value.Replace("|"," ")+"\n");}catch{}Switch("agenda");};
+   try{File.AppendAllText(AgendaPath(),date+"|"+time+"|"+m.Groups[3].Value.Replace("|"," ")+"\n");}catch{}celebrateUntil=DateTime.UtcNow.AddSeconds(2);Switch("agenda");};
   rows.Children.Add(add);
   string today=DateTime.Now.ToString("yyyy-MM-dd");var upcoming=AgendaEntries().Where(p=>String.CompareOrdinal(p[0],today)>=0).Take(12).ToList();
   if(upcoming.Count==0)rows.Children.Add(T("Nada marcado. Digite “14:30 Reunião” e Enter.",13,"#BDBDC5"));
