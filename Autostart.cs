@@ -1,11 +1,11 @@
 ﻿using System;
 using System.IO;
 using Microsoft.Win32;
-namespace Ilha {
+namespace Tito {
 public partial class App {
- // Start with Windows: HKCU Run (no admin) pointing at the stable launcher Ilha.exe, which opens the current version.
+ // Start with Windows: HKCU Run (no admin) pointing at the stable launcher Tito.exe, which opens the current version.
  const string RunKey=@"Software\Microsoft\Windows\CurrentVersion\Run",RunName="Tito";
- static string AutostartCommand(){return "\""+System.IO.Path.Combine(baseDir,"Ilha.exe")+"\" --boot";}
+ static string AutostartCommand(){return "\""+System.IO.Path.Combine(baseDir,"Tito.exe")+"\" --boot";}
  static bool AutostartOn(){try{using(var k=Registry.CurrentUser.OpenSubKey(RunKey))return k!=null&&k.GetValue(RunName)!=null;}catch{return false;}}
  static void SetAutostart(bool on){
   try{

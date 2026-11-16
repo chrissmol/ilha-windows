@@ -9,7 +9,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-namespace Ilha {
+namespace Tito {
 public partial class App {
  // Painel IA: reads the local Claude Code and Codex logs directly (no server, no Python, no extra install).
  // Only counts are kept (events per day, tokens per model, plan limits); no conversation text is read into the result.
@@ -82,14 +82,14 @@ public partial class App {
     string cache=PainelCache();
     if(File.Exists(cache)&&DateTime.UtcNow-File.GetLastWriteTimeUtc(cache)<TimeSpan.FromSeconds(280))data=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(cache));
     else{
-     using(var gate=new System.Threading.Mutex(false,"Local\\IlhaPainelScan"))
+     using(var gate=new System.Threading.Mutex(false,"Local\\TitoPainelScan"))
      {
       if(gate.WaitOne(0)){try{data=PainelScan(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));File.WriteAllText(cache,json.Serialize(data));}finally{gate.ReleaseMutex();}}
       else{System.Threading.Thread.Sleep(8000);if(File.Exists(cache))data=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(cache));}
      }
     }
    }catch(Exception ex){ok=false;try{File.WriteAllText(Path.Combine(dataDir,"painel-error.txt"),ex.ToString());}catch{}}
-   try{w.Dispatcher.BeginInvoke(new Action(()=>{painelBusy=false;if(ok&&data!=null)PainelSet(data);else painelState=2;if(painelState!=1)painelNext=DateTime.UtcNow.AddSeconds(30);if(page=="painel")Render();}));}catch{}
+   try{w.Dispatcher.BeginInvoke(new Action(()=>{painelBusy=false;if(ok&&data!=null)PainelSet(data);else painelState=2;if(painelState!=1)painelNext=DateTime.UtcNow.AddSeconds(30);if(On("geral")||On("uso"))Render();}));}catch{}
   }){IsBackground=true,Priority=System.Threading.ThreadPriority.BelowNormal};
   thread.Start();
  }
@@ -106,7 +106,7 @@ public partial class App {
  }
  static string Millions(double n){return n>=1e6?(n/1e6).ToString("0.0",CultureInfo.InvariantCulture)+" M":n>=1e3?(n/1e3).ToString("0",CultureInfo.InvariantCulture)+" k":n.ToString("0");}
  static void PainelSelfCheck(){
-  string home=Path.Combine(Path.GetTempPath(),"ilha-painel-"+Guid.NewGuid().ToString("N"));
+  string home=Path.Combine(Path.GetTempPath(),"tito-painel-"+Guid.NewGuid().ToString("N"));
   try{
    string stamp=DateTime.UtcNow.AddHours(-1).ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'",CultureInfo.InvariantCulture);
    Directory.CreateDirectory(Path.Combine(home,".claude","projects","p"));Directory.CreateDirectory(Path.Combine(home,".codex","sessions","2026"));

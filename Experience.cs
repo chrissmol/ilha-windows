@@ -8,7 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Interop;
-namespace Ilha {
+namespace Tito {
 public partial class App {
  static bool doNotDisturb,dropHover,compactWide;static double compactWidth=176;static string pillKey="";static int selectedMonitor;static TextBlock compactStatus;static bool focusWasRunning;static DateTime celebrateUntil;
  static MascotEyes headerMascot;static DateTime lastMascotInteraction=DateTime.UtcNow,gazeUntil,surprisedUntil;static Point lastGaze;static bool mediaWasPlaying;
@@ -17,7 +17,7 @@ public partial class App {
  static List<ShelfItem> shelf=new List<ShelfItem>();const int ShelfLimit=12;
  static Rect MonitorArea(){var screens=System.Windows.Forms.Screen.AllScreens;var s=screens[Math.Max(0,Math.Min(selectedMonitor,screens.Length-1))];var a=s.WorkingArea;var source=PresentationSource.FromVisual(w);var transform=source==null?Matrix.Identity:source.CompositionTarget.TransformFromDevice;var origin=transform.Transform(new Point(a.Left,a.Top));var size=transform.Transform(new Vector(a.Width,a.Height));return new Rect(origin.X,origin.Y,size.X,size.Y);}
  static void SetupExperience(){
-  if(!uiTest){outputMeter=new DesktopAudio.PeakMonitor();waveTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(50)};waveTimer.Tick+=(s,e)=>{bool active=!contextHidden&&(page=="music"||(!opened&&media.playing));outputMeter.Enabled=active;bool visible=page=="music"||(!opened&&media.playing);mascot.MediaMode=visible;mascot.ToolTip=visible?(outputMeter.Available?"Nível real da saída padrão · mistura de todos os aplicativos":"Medição de áudio indisponível · "+outputMeter.Error):"Ilha";if(headerMascot!=null)headerMascot.MediaMode=page=="music";Color waves=glassTint.HasValue?glassTint.Value:Color.FromRgb(83,190,255);mascot.WaveColor=waves;if(headerMascot!=null)headerMascot.WaveColor=waves;double peak=active&&outputMeter.Available?outputMeter.Level:0;mascot.AudioPeak(peak);if(headerMascot!=null)headerMascot.AudioPeak(peak);};waveTimer.Start();w.Closed+=(s,e)=>{waveTimer.Stop();outputMeter.Dispose();};}
+  if(!uiTest){outputMeter=new DesktopAudio.PeakMonitor();waveTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(50)};waveTimer.Tick+=(s,e)=>{bool active=!contextHidden&&(page=="music"||(!opened&&media.playing));outputMeter.Enabled=active;bool visible=page=="music"||(!opened&&media.playing);mascot.MediaMode=visible;mascot.ToolTip=visible?(outputMeter.Available?"Nível real da saída padrão · mistura de todos os aplicativos":"Medição de áudio indisponível · "+outputMeter.Error):"Tito";if(headerMascot!=null)headerMascot.MediaMode=page=="music";Color waves=glassTint.HasValue?glassTint.Value:Color.FromRgb(83,190,255);mascot.WaveColor=waves;if(headerMascot!=null)headerMascot.WaveColor=waves;double peak=active&&outputMeter.Available?outputMeter.Level:0;mascot.AudioPeak(peak);if(headerMascot!=null)headerMascot.AudioPeak(peak);};waveTimer.Start();w.Closed+=(s,e)=>{waveTimer.Stop();outputMeter.Dispose();};}
   w.PreviewMouseMove+=(s,e)=>lastMascotInteraction=DateTime.UtcNow;w.PreviewKeyDown+=(s,e)=>lastMascotInteraction=DateTime.UtcNow;
   if(!secondary)try{File.Delete(SharedPath());Directory.Delete(Path.Combine(dataDir,"shelf"),true);}catch{}
   if(!secondary)selectedMonitor=Math.Max(0,Array.FindIndex(System.Windows.Forms.Screen.AllScreens,x=>x.Primary));
@@ -64,7 +64,7 @@ public partial class App {
     running=Convert.ToBoolean(d["running"]);remaining=Convert.ToDouble(d["remaining"]);end=new DateTime(Convert.ToInt64(d["end"]),DateTimeKind.Utc);doNotDisturb=Convert.ToBoolean(d["dnd"]);
     var list=new List<Dictionary<string,string>>();foreach(var o in (System.Collections.IEnumerable)d["conversation"]){var m=(Dictionary<string,object>)o;list.Add(new Dictionary<string,string>{{"role",""+m["role"]},{"content",""+m["content"]}});}
     conversation=list;syncStamp=stamp;syncSnap=Snap();
-    if((page=="robo"&&list.Count!=count)||(page=="focus"&&was!=running))Render();
+    if((On("chat")&&list.Count!=count)||(page=="focus"&&was!=running))Render();
    }else if(Snap()!=syncSnap){
     File.WriteAllText(path,json.Serialize(new Dictionary<string,object>{{"running",running},{"remaining",remaining},{"end",end.Ticks},{"dnd",doNotDisturb},{"conversation",conversation}}));syncStamp=File.GetLastWriteTimeUtc(path);syncSnap=Snap();
    }
