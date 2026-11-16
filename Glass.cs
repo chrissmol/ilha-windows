@@ -34,7 +34,7 @@ public partial class App {
  static void Animate(DependencyObject target,DependencyProperty prop,double value){var a=new DoubleAnimation(value,TimeSpan.FromMilliseconds(360)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}}; ((IAnimatable)target).BeginAnimation(prop,a);}
  static void Expand(bool yes){SetPose(yes,true);}
 
- static void Switch(string p){if(On("chat")&&chatInput!=null)chatDraft=chatInput.Text;if(p=="agent"||p=="robo"||p=="painel"){iaTab=p=="agent"?"geral":p=="robo"?"chat":"uso";p="ia";}page=p;Render();if(!opened)Expand(true);}
+ static void Switch(string p){if(On("chat")&&chatInput!=null)chatDraft=chatInput.Text;if(p=="ia"&&page!="ia")iaTab="geral";if(p=="agent"||p=="robo"||p=="painel"){iaTab=p=="agent"?"geral":p=="robo"?"chat":"uso";p="ia";}page=p;Render();if(!opened)Expand(true);}
  static void Render(){
   var ghost=Ghost();ConfigureArtwork();
   view.Children.Clear();nav.Children.Clear();
