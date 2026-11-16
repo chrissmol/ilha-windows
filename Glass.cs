@@ -34,17 +34,17 @@ public partial class App {
  static void Animate(DependencyObject target,DependencyProperty prop,double value){var a=new DoubleAnimation(value,TimeSpan.FromMilliseconds(360)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}}; ((IAnimatable)target).BeginAnimation(prop,a);}
  static void Expand(bool yes){SetPose(yes,true);}
 
- static void Switch(string p){if(page=="robo"&&chatInput!=null)chatDraft=chatInput.Text;page=p;Render();if(!opened)Expand(true);}
+ static void Switch(string p){if(On("chat")&&chatInput!=null)chatDraft=chatInput.Text;if(p=="ia"&&page!="ia")iaTab="geral";if(p=="agent"||p=="robo"||p=="painel"){iaTab=p=="agent"?"geral":p=="robo"?"chat":"uso";p="ia";}page=p;Render();if(!opened)Expand(true);}
  static void Render(){
   var ghost=Ghost();ConfigureArtwork();
   view.Children.Clear();nav.Children.Clear();
-  if(page=="focus")Focus();else if(page=="music")SystemMusic();else if(page=="agent")LiveAgent();else if(page=="robo"){Robo();if(chatInput!=null)chatInput.Text=chatDraft;}else if(page=="shelf")Shelf();else if(page=="audio")AudioPanel();else if(page=="settings")Settings();else if(page=="notes")Notes();else if(page=="clipboard")ClipboardPage();else if(page=="agenda")Agenda();else if(page=="painel")PainelPage();else Dashboard();
-  var links=new[]{new[]{"home","home","HOME"},new[]{"music","music","MÍDIA"},new[]{"focus","focus","FOCUS"},new[]{"agent","agent","CLAUDE"},new[]{"robo","robo","ROBO"},new[]{"agenda","agenda","AGENDA"},new[]{"notes","notes","NOTAS"},new[]{"clipboard","clipboard","COLAR"},new[]{"painel","painel","PAINEL"}};
+  if(page=="focus")Focus();else if(page=="music")SystemMusic();else if(page=="ia")IAPage();else if(page=="shelf")Shelf();else if(page=="audio")AudioPanel();else if(page=="settings")Settings();else if(page=="notes")Notes();else if(page=="clipboard")ClipboardPage();else if(page=="agenda")Agenda();else Dashboard();
+  var links=new[]{new[]{"home","home","HOME"},new[]{"music","music","MÍDIA"},new[]{"focus","focus","FOCUS"},new[]{"ia","ia","IA"},new[]{"agenda","agenda","AGENDA"},new[]{"notes","notes","NOTAS"},new[]{"clipboard","clipboard","COLAR"}};
   foreach(var link in links){string target=link[1];var b=Btn("",()=>{if(target=="music"){useSystem=true;player.Pause();playing=false;}Switch(target);},link[2]);b.Content=NavIcon(link[0],page==target?link[2]:null);if(page==target){b.Background=B("#22FFFFFF");b.Foreground=B("#FFFFFF");activeNav=b;}nav.Children.Add(b);}
 
   PageIn(ghost);
  }
- static string shownPage="";static readonly string[] pageOrder={"home","music","focus","agent","robo","agenda","notes","clipboard","painel","shelf","audio","settings"};
+ static string shownPage="";static readonly string[] pageOrder={"home","music","focus","ia","agenda","notes","clipboard","shelf","audio","settings"};
  static Image lastGhost;
  static Image Ghost(){
   if(page==shownPage||shownPage==""||!SystemParameters.ClientAreaAnimation||!w.IsVisible||view.ActualWidth<2||view.ActualHeight<2)return null;

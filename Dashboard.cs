@@ -66,8 +66,8 @@ public partial class App {
   try{var context=new List<Dictionary<string,string>>{new Dictionary<string,string>{{"role","system"},{"content","Você é Robo, um assistente de desktop. Responda em português de forma breve. Não invente acesso a tarefas, calendário ou arquivos. O timer está "+(running?"em andamento":"parado")+" e mostra "+Format(remaining)+". Você só conhece o que o usuário escreveu nesta conversa."}}};context.AddRange(conversation);
    string content;if(IsOllama()){string payload=json.Serialize(new{model=OllamaName(),messages=context,stream=false});string raw=await Task.Run(()=>LocalRequest("chat",payload));var response=json.Deserialize<Dictionary<string,object>>(raw);var answer=response["message"] as Dictionary<string,object>;content=Convert.ToString(answer["content"]);}
    else{MotorProgress+=MotorUi;MotorShowProgress(true);try{content=await MotorChat(context);}finally{MotorProgress-=MotorUi;MotorShowProgress(false);}}
-   conversation.Add(new Dictionary<string,string>{{"role","assistant"},{"content",content}});if(page=="robo")AddChatBubble(content,false);
-  }catch(Exception ex){var inner=ex is AggregateException&&ex.InnerException!=null?ex.InnerException:ex;if(page=="robo")AddChatBubble(inner is MotorException?inner.Message:IsOllama()?"Não consegui conectar ao Ollama. Confira se ele está aberto, ou escolha a IA embutida do Tito em Settings.":"Não consegui usar a IA embutida: "+inner.Message,false);}finally{chatBusy=false;}
+   conversation.Add(new Dictionary<string,string>{{"role","assistant"},{"content",content}});if(On("chat"))AddChatBubble(content,false);
+  }catch(Exception ex){var inner=ex is AggregateException&&ex.InnerException!=null?ex.InnerException:ex;if(On("chat"))AddChatBubble(inner is MotorException?inner.Message:IsOllama()?"Não consegui conectar ao Ollama. Confira se ele está aberto, ou escolha a IA embutida do Tito em Settings.":"Não consegui usar a IA embutida: "+inner.Message,false);}finally{chatBusy=false;}
  }
  // Ollama is only an optional alternative: when it is running, its models are appended to the list.
  static async void DetectModels(){
