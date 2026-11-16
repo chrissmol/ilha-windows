@@ -111,13 +111,24 @@ public partial class App {
  }
  static bool uiTest;
  static void StartMediaBridge(){
-  Directory.CreateDirectory(dataDir);WriteHookSettings();string modelFile=System.IO.Path.Combine(dataDir,"model.txt");if(File.Exists(modelFile))localModel=File.ReadAllText(modelFile).Trim();MotorKillStale();leaveTimer.Tick+=(s,e)=>{leaveTimer.Stop();if(!w.IsMouseOver&&w.IsEnabled&&Mouse.Captured==null&&!dropHover)Expand(false);};
+  Directory.CreateDirectory(dataDir);WriteHookSettings();if(!uiTest)InstallUserHooks();string modelFile=System.IO.Path.Combine(dataDir,"model.txt");if(File.Exists(modelFile))localModel=File.ReadAllText(modelFile).Trim();MotorKillStale();leaveTimer.Tick+=(s,e)=>{leaveTimer.Stop();if(!w.IsMouseOver&&w.IsEnabled&&Mouse.Captured==null&&!dropHover)Expand(false);};
   try{var info=new ProcessStartInfo("powershell.exe","-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""+System.IO.Path.Combine(baseDir,"MediaBridge.ps1")+"\" -OwnerPid "+Process.GetCurrentProcess().Id){UseShellExecute=false,CreateNoWindow=true,WindowStyle=ProcessWindowStyle.Hidden};mediaWorker=Process.Start(info);}catch(Exception ex){media.error=ex.Message;}
  }
  static void WriteHookSettings(){
   var hooks=new Dictionary<string,object>();string command="powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File \""+System.IO.Path.Combine(baseDir,"ClaudeHook.ps1").Replace("\\","/")+"\"";
   foreach(var ev in new[]{"SessionStart","SessionEnd","UserPromptSubmit","PreToolUse","PostToolUse","Notification","Stop"})hooks[ev]=new[]{new{matcher="",hooks=new[]{new{type="command",command=command,timeout=5}}}};
   File.WriteAllText(System.IO.Path.Combine(baseDir,"claude-settings.json"),json.Serialize(new{hooks=hooks}),new System.Text.UTF8Encoding(false));
+ }
+ // Instala os hooks em ~/.claude/settings.json sem apagar o resto; troca entradas antigas do ClaudeHook.ps1 e guarda backup.
+ static void InstallUserHooks(){
+  try{
+   string file=System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),".claude","settings.json");Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file));
+   var root=new Dictionary<string,object>();if(File.Exists(file)){string text=File.ReadAllText(file);if(text.Trim().Length>0)root=json.Deserialize<Dictionary<string,object>>(text);if(!File.Exists(file+".tito-backup"))File.Copy(file,file+".tito-backup");}
+   var ours=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(System.IO.Path.Combine(baseDir,"claude-settings.json")));
+   var mine=(Dictionary<string,object>)ours["hooks"];var hooks=root.ContainsKey("hooks")?root["hooks"] as Dictionary<string,object>:null;if(hooks==null)hooks=new Dictionary<string,object>();
+   foreach(var ev in mine.Keys){var list=new List<object>();var old=hooks.ContainsKey(ev)?hooks[ev] as System.Collections.IEnumerable:null;if(old!=null)foreach(var item in old)if(!json.Serialize(item).Contains("ClaudeHook.ps1"))list.Add(item);foreach(var item in (System.Collections.IEnumerable)mine[ev])list.Add(item);hooks[ev]=list;}
+   root["hooks"]=hooks;string output=json.Serialize(root);if(!File.Exists(file)||File.ReadAllText(file)!=output)File.WriteAllText(file,output,new System.Text.UTF8Encoding(false));
+  }catch{}
  }
  public static void Test(){
   SetKeepAwake(true);if((SetThreadExecutionState(0x80000003u)&3)!=3)throw new Exception("Keep awake was not applied");SetKeepAwake(false);PainelSelfCheck();

@@ -30,7 +30,7 @@ public partial class App {
    var body=Stack();agentStatus=T("Aguardando conexão",12,"#E2D1C4");agentDetail=T("",10.5,"#BEB2AC");agentDetail.TextTrimming=TextTrimming.CharacterEllipsis;agentAge=T("",10,"#ADA099");
    body.Children.Add(agentStatus);body.Children.Add(agentDetail);body.Children.Add(agentAge);
    if(painel!=null&&PainelActive("claude")){body.Children.Add(new Border{Height=6});foreach(var l in PainelLimits().Where(r=>Convert.ToString(r["ia"])=="claude"))body.Children.Add(LimitRow(Convert.ToString(l["nome"]),Num(l["pct"])));}
-   var copy=Btn("Conectar sessão",()=>{Clipboard.SetText("claude --settings \""+System.IO.Path.Combine(baseDir,"claude-settings.json")+"\"");agentDetail.Text="Comando copiado. Execute no terminal do projeto.";},"Copiar comando de conexão");copy.HorizontalAlignment=HorizontalAlignment.Left;copy.Margin=new Thickness(-10,4,0,0);body.Children.Add(copy);
+   var copy=Btn("Conectar sessão",()=>{WriteHookSettings();InstallUserHooks();agentDetail.Text="Conectado. Abra uma nova sessão do Claude Code.";},"Conectar o Claude Code");copy.HorizontalAlignment=HorizontalAlignment.Left;copy.Margin=new Thickness(-10,4,0,0);body.Children.Add(copy);
    return IACard("CLAUDE CODE","✳  Claude","#FFB36B",body,c,n);});
   if(painel!=null&&PainelActive("codex"))cards.Add((c,n)=>{
    var body=Stack();foreach(var l in PainelLimits().Where(r=>Convert.ToString(r["ia"])=="codex"))body.Children.Add(LimitRow(Convert.ToString(l["nome"]),Num(l["pct"]),l.ContainsKey("reinicia")?Num(l["reinicia"]):0));
