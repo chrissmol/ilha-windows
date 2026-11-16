@@ -126,6 +126,7 @@ public partial class App {
   File.WriteAllText(System.IO.Path.Combine(baseDir,"claude-settings.json"),json.Serialize(new{hooks=hooks}),new System.Text.UTF8Encoding(false));
  }
  public static void Test(){
+  SetKeepAwake(true);if((SetThreadExecutionState(0x80000003u)&3)!=3)throw new Exception("Keep awake was not applied");SetKeepAwake(false);
   Directory.CreateDirectory(dataDir);if(Format(1500)!="25:00"||Format(-1)!="00:00"||Format(3600)!="60:00")throw new Exception("Timer roundtrip");Build();CheckExperience();Switch("focus");start.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));if(!running)throw new Exception("Timer start failed");start.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));if(running||remaining<1490||remaining>1500)throw new Exception("Timer pause failed");remaining=1500;var saved=media;media=new MediaState{available=true};SendMedia("seek",42.5);var command=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(System.IO.Path.Combine(dataDir,"media-command.json")));if(Convert.ToDouble(command["position"])!=42.5)throw new Exception("Media command failed");media=saved;
   foreach(string p in new[]{"home","music","agent","focus","robo","settings"}){Switch(p);Capture(p);}
   VisualChecks();

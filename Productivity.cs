@@ -10,7 +10,7 @@ namespace Ilha {
 public partial class App {
  // Notes, clipboard history and a local agenda. Nothing here leaves the machine.
  static readonly List<string> clipItems=new List<string>();static string lastClip="";static TextBox notesBox;
- [System.Runtime.InteropServices.DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint flags);
+ [System.Runtime.InteropServices.DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint flags);
  static bool keepAwake,batteryLow,batteryKnown,wasCharging;static DateTime curiousUntil,typingUntil,dizzyUntil,excitedUntil,loveUntil,winkUntil,agentBusyUntil,nextQuirk=DateTime.UtcNow.AddSeconds(10),quirkUntil;static Point quirkGaze;
  static readonly Queue<DateTime> taps=new Queue<DateTime>();
  // Tito reacts to taps: a giggle, and dizzy after five quick ones.
