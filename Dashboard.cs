@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net;
 using System.Linq;
@@ -20,17 +20,17 @@ public partial class App {
  static Border Card(string top,string bottom,double width){return new Border{CornerRadius=new CornerRadius(12),Background=new LinearGradientBrush(B(top).Color,B(bottom).Color,90),Width=width,Padding=new Thickness(12),Cursor=Cursors.Hand};}
  static void Dashboard(){
   var grid=new Grid();grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(110)});grid.ColumnDefinitions.Add(new ColumnDefinition());grid.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(110)});view.Children.Add(grid);
-  var agent=Card("#B69D5031","#BCDC773A",104);agent.HorizontalAlignment=HorizontalAlignment.Left;agent.MouseLeftButtonUp+=(s,e)=>Switch("agent");
+  var agent=Card("#F2E8742C","#F2FF9A3D",104);agent.HorizontalAlignment=HorizontalAlignment.Left;agent.MouseLeftButtonUp+=(s,e)=>Switch("agent");
   var a=new Grid();agent.Child=a;a.Children.Add(new TextBlock{Text="CLAUDE",FontSize=9,Foreground=B("#E6E0D7"),VerticalAlignment=VerticalAlignment.Top});
   var info=Stack();info.VerticalAlignment=VerticalAlignment.Bottom;dashCount=T("—",29);info.Children.Add(dashCount);dashAgent=T("Sem sessão",9,"#F0D2BE");info.Children.Add(dashAgent);a.Children.Add(info);grid.Children.Add(agent);
-  var music=Card("#A34A8CAA","#D018203D",Double.NaN);music.Margin=new Thickness(4,0,4,0);music.Padding=new Thickness(0);music.ClipToBounds=true;music.SizeChanged+=(s,e)=>music.Clip=new RectangleGeometry(new Rect(0,0,music.ActualWidth,music.ActualHeight),12,12);Grid.SetColumn(music,1);grid.Children.Add(music);
+  var music=Card("#F23AA8D8","#F21B2F8A",Double.NaN);music.Margin=new Thickness(4,0,4,0);music.Padding=new Thickness(0);music.ClipToBounds=true;music.SizeChanged+=(s,e)=>music.Clip=new RectangleGeometry(new Rect(0,0,music.ActualWidth,music.ActualHeight),12,12);Grid.SetColumn(music,1);grid.Children.Add(music);
   var m=new Grid();music.Child=m;var moon=new Ellipse{Width=80,Height=80,Fill=B("#BEE7E4D8"),VerticalAlignment=VerticalAlignment.Top,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,-10,32,0)};m.Children.Add(moon);
   m.Children.Add(new System.Windows.Shapes.Path{Data=Geometry.Parse("M0,90 L65,43 120,80 185,20 270,73 330,43 340,160 0,160 Z"),Fill=B("#70202B50"),Stretch=Stretch.Fill,Height=85,VerticalAlignment=VerticalAlignment.Bottom});
   dashImage=new Image{Stretch=Stretch.UniformToFill};m.Children.Add(dashImage);m.Children.Add(new Border{Background=new LinearGradientBrush(new GradientStopCollection{new GradientStop(Colors.Transparent,0),new GradientStop(Color.FromArgb(215,7,12,24),1)},90)});
   var text=Stack();text.VerticalAlignment=VerticalAlignment.Bottom;text.Margin=new Thickness(14,0,48,13);dashTrack=T("Nenhuma mídia",20);dashTrack.FontWeight=FontWeights.SemiBold;dashTrack.TextTrimming=TextTrimming.CharacterEllipsis;text.Children.Add(dashTrack);dashArtist=T("Abra seu player",10,"#E7E4E1");dashArtist.Margin=new Thickness(0,3,0,0);text.Children.Add(dashArtist);m.Children.Add(text);
   dashPlay=Btn("▶",()=>{if(media.available)SendMedia("toggle");else Switch("music");},"Reproduzir / pausar");RoundTransport(dashPlay);dashPlay.Width=30;dashPlay.Height=30;dashPlay.Padding=new Thickness(0);dashPlay.Background=B("#F5F1EB");dashPlay.Foreground=B("#25212B");dashPlay.HorizontalAlignment=HorizontalAlignment.Right;dashPlay.VerticalAlignment=VerticalAlignment.Bottom;dashPlay.Margin=new Thickness(0,0,13,14);m.Children.Add(dashPlay);
   music.MouseLeftButtonUp+=(s,e)=>{if(!(e.OriginalSource is Button)&&!IsButtonSource(e.OriginalSource as DependencyObject))Switch("music");};
-  var focus=Card("#82514C8C","#AD6253BB",104);focus.HorizontalAlignment=HorizontalAlignment.Right;Grid.SetColumn(focus,2);grid.Children.Add(focus);var f=new Grid();focus.Child=f;var label=T("FOCUS",9,"#E8DFF8");label.VerticalAlignment=VerticalAlignment.Top;f.Children.Add(label);
+  var focus=Card("#F27A4CF0","#F2B05CFF",104);focus.HorizontalAlignment=HorizontalAlignment.Right;Grid.SetColumn(focus,2);grid.Children.Add(focus);var f=new Grid();focus.Child=f;var label=T("FOCUS",9,"#E8DFF8");label.VerticalAlignment=VerticalAlignment.Top;f.Children.Add(label);
   var timer=Stack();timer.VerticalAlignment=VerticalAlignment.Bottom;timer.Margin=new Thickness(0,0,0,2);dashTimer=T("25:00",24);System.Windows.Documents.Typography.SetNumeralAlignment(dashTimer,FontNumeralAlignment.Tabular);timer.Children.Add(dashTimer);dashReady=T("Ready",9,"#D7CCF1");dashReady.Margin=new Thickness(0,4,0,0);timer.Children.Add(dashReady);f.Children.Add(timer);
   dashStart=Btn("▶",()=>{if(running){remaining=Math.Max(0,(end-DateTime.UtcNow).TotalSeconds);running=false;}else{if(remaining<=0)remaining=1500;end=DateTime.UtcNow.AddSeconds(remaining);running=true;}UpdateDashboard();},"Iniciar / pausar foco");RoundTransport(dashStart);dashStart.Width=23;dashStart.Height=23;dashStart.Padding=new Thickness(0);dashStart.HorizontalAlignment=HorizontalAlignment.Right;dashStart.VerticalAlignment=VerticalAlignment.Bottom;dashStart.Margin=new Thickness(0,-2,-4,0);dashStart.Foreground=B("#51467B");dashStart.Background=B("#F5F1EB");f.Children.Add(dashStart);
   focus.MouseLeftButtonUp+=(s,e)=>{if(!IsButtonSource(e.OriginalSource as DependencyObject))Switch("focus");};dashCover="";UpdateDashboard();
