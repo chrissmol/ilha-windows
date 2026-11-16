@@ -122,9 +122,10 @@ public partial class App {
  }
  static void PresenceTick(){
   SyncFullscreenHide();
+  SyncMonitors(false);
   if(secondary&&ownerProc!=null&&ownerProc.HasExited){w.Close();return;}
   if(restartSignal!=null&&restartSignal.WaitOne(0)){w.Close();return;}
-  bool suppress=autoHideContext&&DesktopContext.Suppress(new WindowInteropHelper(w).Handle,hiddenApps);
+  bool suppress=monitorOff||autoHideContext&&DesktopContext.Suppress(new WindowInteropHelper(w).Handle,hiddenApps);
   if(suppress&&!contextHidden){contextHidden=true;leaveTimer.Stop();SetPose(false,false);w.Hide();}
   else if(!suppress&&contextHidden){contextHidden=false;SetPose(false,false);w.Show();}
   if(openSignal!=null&&openSignal.WaitOne(0)&&!contextHidden){w.Show();Expand(true);}

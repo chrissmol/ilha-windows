@@ -39,10 +39,19 @@ public partial class App {
   try{File.WriteAllLines(FsFile(),off.Select(x=>x.ToString()).ToArray());}catch{}
   SyncFullscreenHide();PresenceTick();
  }
+ // Any island can switch any screen: the file is the truth and every island rereads it when it changes. An "off" primary only hides (it owns the tray and the media bridge).
+ static DateTime monStamp;static bool monitorOff;
+ static void SyncMonitors(bool force){try{
+  var t=File.Exists(MonitorsFile())?File.GetLastWriteTimeUtc(MonitorsFile()):DateTime.MinValue;if(t==monStamp&&!force)return;monStamp=t;
+  monitorOff=OffMonitors().Contains(selectedMonitor);
+  if(secondary){if(monitorOff)w.Close();}else SyncIslands();
+ }catch{}}
  static void SetMonitor(int i,bool on){
-  var off=OffMonitors();if(on)off.Remove(i);else off.Add(i);
+  var off=OffMonitors();var count=Forms.Screen.AllScreens.Length;
+  if(!on&&Enumerable.Range(0,count).Count(x=>x!=i&&!off.Contains(x))==0){error="Mantenha pelo menos uma tela ligada.";ShowError();return;}
+  if(on)off.Remove(i);else off.Add(i);
   try{File.WriteAllLines(MonitorsFile(),off.Select(x=>x.ToString()).ToArray());}catch{}
-  if(secondary){if(!on&&i==selectedMonitor)w.Close();}else SyncIslands();
+  SyncMonitors(true);
  }
  static void SetupMonitors(){
   if(uiTest)return;
@@ -56,7 +65,7 @@ public partial class App {
   if(secondary)return;
   var helper=new WindowInteropHelper(w);IntPtr hwnd=helper.EnsureHandle();
   HwndSource.FromHwnd(hwnd).AddHook((IntPtr h,int msg,IntPtr wp,IntPtr lp,ref bool handled)=>{
-   if(msg==0x312&&wp.ToInt32()==0x7157){handled=true;var screens=Forms.Screen.AllScreens;int i=Array.IndexOf(screens,Forms.Screen.FromPoint(Forms.Cursor.Position));SignalIsland("TitoGlassOpen",i<0||i==selectedMonitor?"":"m"+i);}
+   if(msg==0x312&&wp.ToInt32()==0x7157){handled=true;var screens=Forms.Screen.AllScreens;int i=Array.IndexOf(screens,Forms.Screen.FromPoint(Forms.Cursor.Position));if(i>=0&&OffMonitors().Contains(i))SetMonitor(i,true);else SignalIsland("TitoGlassOpen",i<0||i==selectedMonitor?"":"m"+i);}
    return IntPtr.Zero;});
   RegisterHotKey(hwnd,0x7157,0x3|0x4000,0x54); // Ctrl+Alt+T
   w.Closed+=(s,e)=>UnregisterHotKey(hwnd,0x7157);
@@ -66,7 +75,7 @@ public partial class App {
   root.DropDownOpening+=(s,e)=>{
    root.DropDownItems.Clear();var off=OffMonitors();var fsOff=FullscreenOff();var screens=Forms.Screen.AllScreens;
    for(int i=0;i<screens.Length;i++){int n=i;var sub=new Forms.ToolStripMenuItem(MonitorLabel(i));
-    var on=new Forms.ToolStripMenuItem("Tito nesta tela"){Checked=!off.Contains(i),Enabled=i!=selectedMonitor};on.Click+=(a,b)=>SetMonitor(n,off.Contains(n));sub.DropDownItems.Add(on);
+    var on=new Forms.ToolStripMenuItem("Tito nesta tela"){Checked=!off.Contains(i),Enabled=off.Contains(i)||Enumerable.Range(0,screens.Length).Count(x=>x!=n&&!off.Contains(x))>0};on.Click+=(a,b)=>SetMonitor(n,off.Contains(n));sub.DropDownItems.Add(on);
     var fs=new Forms.ToolStripMenuItem("Ocultar em tela cheia"){Checked=!fsOff.Contains(i)};fs.Click+=(a,b)=>SetFullscreenHide(n,fsOff.Contains(n));sub.DropDownItems.Add(fs);root.DropDownItems.Add(sub);}
   };
   root.DropDownItems.Add("…");return root;
@@ -74,11 +83,11 @@ public partial class App {
  static UIElement MonitorsCard(){
   var box=Stack();var title=T("Telas",12,"#E3D9E8");title.Margin=new Thickness(8,4,0,4);box.Children.Add(title);
   var off=OffMonitors();var fsOff=FullscreenOff();var screens=Forms.Screen.AllScreens;
-  for(int i=0;i<screens.Length;i++){int n=i;if(secondary&&i!=selectedMonitor)continue;
+  for(int i=0;i<screens.Length;i++){int n=i;
    var cap=T(MonitorLabel(i),10.5,"#B9ADB9");cap.Margin=new Thickness(8,4,8,2);box.Children.Add(cap);
-   if(secondary)box.Children.Add(LinkRow("Desligar Tito nesta tela",()=>SetMonitor(n,false)));else if(i!=selectedMonitor)box.Children.Add(ToggleRow("Mostrar Tito",!off.Contains(i),v=>SetMonitor(n,v)));
+   box.Children.Add(ToggleRow("Mostrar Tito",!off.Contains(i),v=>SetMonitor(n,v)));
    box.Children.Add(ToggleRow("Ocultar em tela cheia",!fsOff.Contains(i),v=>SetFullscreenHide(n,v)));}
-  var hint=T("Ctrl+Alt+T abre o Tito na tela onde está o mouse.",10.5,"#B9ADB9");hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new Thickness(8,4,8,4);box.Children.Add(hint);
+  var hint=T("Ctrl+Alt+T abre o Tito na tela do mouse (ou religa, se estiver desligado).",10.5,"#B9ADB9");hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new Thickness(8,4,8,4);box.Children.Add(hint);
   return CardBox(box);
  }
 }
