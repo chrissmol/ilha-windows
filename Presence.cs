@@ -116,7 +116,8 @@ public partial class App {
   else if(!suppress&&contextHidden){contextHidden=false;SetPose(false,false);w.Show();}
   if(openSignal!=null&&openSignal.WaitOne(0)&&!contextHidden){w.Show();Expand(true);}
   if(!opened&&mascot!=null&&!contextHidden){
-   Point gaze=DesktopContext.Gaze(w);if((gaze-lastGaze).Length>.06){gazeUntil=DateTime.UtcNow.AddMilliseconds(1300);lastGaze=gaze;}if(DateTime.UtcNow>gazeUntil)gaze=new Point();mascot.GazeX+=(gaze.X-mascot.GazeX)*.35;mascot.GazeY+=(gaze.Y-mascot.GazeY)*.35;mascot.InvalidateVisual();
+   Point gaze=DesktopContext.Gaze(w);if((gaze-lastGaze).Length>.06){gazeUntil=DateTime.UtcNow.AddMilliseconds(1300);lastGaze=gaze;}if(DateTime.UtcNow>gazeUntil)gaze=new Point();if(DateTime.UtcNow<quirkUntil)gaze=quirkGaze;mascot.GazeX+=(gaze.X-mascot.GazeX)*.35;mascot.GazeY+=(gaze.Y-mascot.GazeY)*.35;mascot.InvalidateVisual();
+   if(DateTime.UtcNow>=nextQuirk){nextQuirk=DateTime.UtcNow.AddSeconds(14+random.NextDouble()*16);if(mascot.Mood=="idle"){int q=random.Next(3);if(q==0)winkUntil=DateTime.UtcNow.AddMilliseconds(800);else if(q==1){quirkGaze=new Point(random.Next(2)==0?-2:2,0);quirkUntil=DateTime.UtcNow.AddMilliseconds(1300);}else mascot.Hop(1);}}
    if(DateTime.UtcNow>=nextBlink){mascot.BlinkOnce();nextBlink=DateTime.UtcNow.AddSeconds(3+random.NextDouble()*4);}
   }
  }

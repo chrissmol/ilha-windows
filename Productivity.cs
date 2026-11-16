@@ -11,13 +11,20 @@ public partial class App {
  // Notes, clipboard history and a local agenda. Nothing here leaves the machine.
  static readonly List<string> clipItems=new List<string>();static string lastClip="";static TextBox notesBox;
  [System.Runtime.InteropServices.DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint flags);
- static bool keepAwake;static DateTime curiousUntil,typingUntil;
+ static bool keepAwake,batteryLow,batteryKnown,wasCharging;static DateTime curiousUntil,typingUntil,dizzyUntil,excitedUntil,loveUntil,winkUntil,agentBusyUntil,nextQuirk=DateTime.UtcNow.AddSeconds(10),quirkUntil;static Point quirkGaze;
+ static readonly Queue<DateTime> taps=new Queue<DateTime>();
+ // Tito reacts to taps: a giggle, and dizzy after five quick ones.
+ static void MascotTap(){
+  var now=DateTime.UtcNow;taps.Enqueue(now);while(taps.Count>0&&now-taps.Peek()>TimeSpan.FromSeconds(3))taps.Dequeue();
+  if(taps.Count>=5){dizzyUntil=now.AddSeconds(3);taps.Clear();}else{celebrateUntil=now.AddMilliseconds(1400);if(headerMascot!=null)headerMascot.Hop(1);}
+ }
  static void SetKeepAwake(bool on){keepAwake=on;SetThreadExecutionState(on?0x80000003u:0x80000000u);}
  // Resting-pill battery: only when charging or low; desktops without a battery return null.
  static string BatteryText(out string color){
   color=null;var ps=System.Windows.Forms.SystemInformation.PowerStatus;
   if((ps.BatteryChargeStatus&(System.Windows.Forms.BatteryChargeStatus.NoSystemBattery|System.Windows.Forms.BatteryChargeStatus.Unknown))!=0)return null;
   int pct=(int)Math.Round(ps.BatteryLifePercent*100);bool charging=ps.PowerLineStatus==System.Windows.Forms.PowerLineStatus.Online;
+  batteryLow=!charging&&pct<=20;if(batteryKnown&&charging&&!wasCharging)loveUntil=DateTime.UtcNow.AddSeconds(2.5);batteryKnown=true;wasCharging=charging;
   if(charging&&pct<100){color="#30D158";return "⚡ "+pct+"%";}
   if(!charging&&pct<=30){color=pct<=20?"#FF453A":"#FFB000";return pct+"%";}
   return null;

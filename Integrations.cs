@@ -105,7 +105,7 @@ public partial class App {
   try{var e=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(path));string ev=e.ContainsKey("event")?e["event"]:"";string tool=e.ContainsKey("tool")?e["tool"]:"";
    agentStatus.Text=ev=="Stop"?"Concluído":ev=="Notification"?"Aguardando sua atenção":ev=="SessionEnd"?"Sessão encerrada":ev=="PreToolUse"?"Executando · "+tool:ev=="PostToolUse"?"Ferramenta concluída · "+tool:ev=="UserPromptSubmit"?"Trabalhando":"Sessão conectada";
    agentDetail.Text=(e.ContainsKey("project")?e["project"]:"")+(e.ContainsKey("file")?"  /  "+e["file"]:"");DateTime stamp;if(DateTime.TryParse(e["updated"],out stamp))agentAge.Text="Último evento às "+stamp.ToLocalTime().ToString("HH:mm:ss");
-   if(lastAgent!=e["updated"]){if(ev=="Stop"&&lastAgent!="")if(!contextHidden&&!doNotDisturb)System.Media.SystemSounds.Asterisk.Play();lastAgent=e["updated"];}
+   if(lastAgent!=e["updated"]){if(lastAgent!=""){if(ev=="Stop"){excitedUntil=DateTime.UtcNow.AddSeconds(4);agentBusyUntil=DateTime.MinValue;}else if(ev=="Notification")surprisedUntil=DateTime.UtcNow.AddMilliseconds(1500);else if(ev=="PreToolUse"||ev=="PostToolUse"||ev=="UserPromptSubmit")agentBusyUntil=DateTime.UtcNow.AddSeconds(8);}if(ev=="Stop"&&lastAgent!="")if(!contextHidden&&!doNotDisturb)System.Media.SystemSounds.Asterisk.Play();lastAgent=e["updated"];}
   }catch{}
  }
  static void PollIntegrations(){
