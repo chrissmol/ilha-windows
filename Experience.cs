@@ -13,33 +13,34 @@ public partial class App {
  static bool doNotDisturb,dropHover,compactWide;static double compactWidth=176;static string pillKey="";static int selectedMonitor;static TextBlock compactStatus;static bool focusWasRunning;static DateTime celebrateUntil;
  static MascotEyes headerMascot;static DateTime lastMascotInteraction=DateTime.UtcNow,gazeUntil,surprisedUntil;static Point lastGaze;static bool mediaWasPlaying;
  static DesktopAudio.PeakMonitor outputMeter;static System.Windows.Threading.DispatcherTimer waveTimer;
- sealed class ShelfItem {public string Name,Text;public string[] Files;public BitmapSource Image;public DateTime Added=DateTime.UtcNow;}
+ sealed class ShelfItem {public string Name,Text,Folder;public string[] Files;public BitmapSource Image;public DateTime Added=DateTime.UtcNow;}
  static List<ShelfItem> shelf=new List<ShelfItem>();const int ShelfLimit=12;
  static Rect MonitorArea(){var screens=System.Windows.Forms.Screen.AllScreens;var s=screens[Math.Max(0,Math.Min(selectedMonitor,screens.Length-1))];var a=s.WorkingArea;var source=PresentationSource.FromVisual(w);var transform=source==null?Matrix.Identity:source.CompositionTarget.TransformFromDevice;var origin=transform.Transform(new Point(a.Left,a.Top));var size=transform.Transform(new Vector(a.Width,a.Height));return new Rect(origin.X,origin.Y,size.X,size.Y);}
  static void SetupExperience(){
   if(!uiTest){outputMeter=new DesktopAudio.PeakMonitor();waveTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(50)};waveTimer.Tick+=(s,e)=>{bool active=!contextHidden&&(page=="music"||(!opened&&media.playing));outputMeter.Enabled=active;bool visible=page=="music"||(!opened&&media.playing);mascot.MediaMode=visible;mascot.ToolTip=visible?(outputMeter.Available?"Nível real da saída padrão · mistura de todos os aplicativos":"Medição de áudio indisponível · "+outputMeter.Error):"Ilha";if(headerMascot!=null)headerMascot.MediaMode=page=="music";Color waves=glassTint.HasValue?glassTint.Value:Color.FromRgb(83,190,255);mascot.WaveColor=waves;if(headerMascot!=null)headerMascot.WaveColor=waves;double peak=active&&outputMeter.Available?outputMeter.Level:0;mascot.AudioPeak(peak);if(headerMascot!=null)headerMascot.AudioPeak(peak);};waveTimer.Start();w.Closed+=(s,e)=>{waveTimer.Stop();outputMeter.Dispose();};}
   w.PreviewMouseMove+=(s,e)=>lastMascotInteraction=DateTime.UtcNow;w.PreviewKeyDown+=(s,e)=>lastMascotInteraction=DateTime.UtcNow;
-  if(!secondary)try{File.Delete(SharedPath());}catch{}
+  if(!secondary)try{File.Delete(SharedPath());Directory.Delete(Path.Combine(dataDir,"shelf"),true);}catch{}
   if(!secondary)selectedMonitor=Math.Max(0,Array.FindIndex(System.Windows.Forms.Screen.AllScreens,x=>x.Primary));
   try{string path=Path.Combine(dataDir,"experience.json");if(File.Exists(path)){var prefs=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(path));if(prefs.ContainsKey("quiet"))doNotDisturb=Convert.ToBoolean(prefs["quiet"]);}string source=Path.Combine(dataDir,"media-source.txt");if(File.Exists(source))selectedSource=File.ReadAllText(source).Trim();}catch{}
   w.Closed+=(s,e)=>{if(!secondary)File.WriteAllText(Path.Combine(dataDir,"experience.json"),json.Serialize(new{monitor=selectedMonitor,quiet=doNotDisturb}));};
   var face=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center};
   mascot.HorizontalAlignment=HorizontalAlignment.Center;restingShell.Child=null;face.Children.Add(mascot);compactStatus=T("",12);compactStatus.Margin=new Thickness(8,0,0,0);compactStatus.Visibility=Visibility.Collapsed;face.Children.Add(compactStatus);restingShell.Child=face;
-  w.AllowDrop=true;w.PreviewDragOver+=(s,e)=>{bool valid=e.Data.GetDataPresent(DataFormats.FileDrop)||e.Data.GetDataPresent(DataFormats.UnicodeText)||e.Data.GetDataPresent(DataFormats.Bitmap);e.Effects=valid?DragDropEffects.Copy:DragDropEffects.None;e.Handled=true;if(valid){dropHover=true;leaveTimer.Stop();if(page!="shelf")Switch("shelf");if(!opened)Expand(true);}};
+  w.AllowDrop=true;w.PreviewDragOver+=(s,e)=>{bool valid=e.Data.GetDataPresent(DataFormats.FileDrop)||HasVirtualFiles(e.Data)||e.Data.GetDataPresent(DataFormats.UnicodeText)||e.Data.GetDataPresent(DataFormats.Bitmap);e.Effects=valid?DragDropEffects.Copy:DragDropEffects.None;e.Handled=true;if(valid){dropHover=true;leaveTimer.Stop();if(page!="shelf")Switch("shelf");if(!opened)Expand(true);}};
   w.DragLeave+=(s,e)=>{dropHover=false;leaveTimer.Start();};w.Drop+=(s,e)=>{dropHover=false;ReceiveDrop(e.Data);Switch("shelf");e.Handled=true;};
   restingShell.MouseLeftButtonUp+=(s,e)=>Expand(true);
  }
  static void ReceiveDrop(IDataObject data){
   var item=new ShelfItem();
   if(data.GetDataPresent(DataFormats.FileDrop)){item.Files=(string[])data.GetData(DataFormats.FileDrop);if(item.Files==null||item.Files.Length==0)return;item.Name=item.Files.Length==1?Path.GetFileName(item.Files[0]):item.Files.Length+" arquivos";}
+  else if(HasVirtualFiles(data)&&ReceiveVirtualFiles(data,item)){}
   else if(data.GetDataPresent(DataFormats.Bitmap)){var bitmap=data.GetData(DataFormats.Bitmap) as BitmapSource;if(bitmap==null)return;if((long)bitmap.PixelWidth*bitmap.PixelHeight>32000000){error="Imagem muito grande. Arraste o arquivo da imagem.";ShowError();return;}item.Image=bitmap.Clone();item.Image.Freeze();item.Name="Imagem";}
   else if(data.GetDataPresent(DataFormats.UnicodeText)){item.Text=Convert.ToString(data.GetData(DataFormats.UnicodeText));if(String.IsNullOrWhiteSpace(item.Text))return;if(item.Text.Length>1000000){error="Texto muito grande para a prateleira.";ShowError();return;}item.Name=item.Text.Replace("\r"," ").Replace("\n"," ");if(item.Name.Length>48)item.Name=item.Name.Substring(0,48)+"…";}else return;
-  shelf.Insert(0,item);if(shelf.Count>ShelfLimit)shelf.RemoveAt(shelf.Count-1);lastMascotInteraction=DateTime.UtcNow;surprisedUntil=DateTime.UtcNow.AddMilliseconds(450);celebrateUntil=DateTime.UtcNow.AddSeconds(2.5);
+  shelf.Insert(0,item);if(shelf.Count>ShelfLimit)Forget(shelf[shelf.Count-1]);lastMascotInteraction=DateTime.UtcNow;surprisedUntil=DateTime.UtcNow.AddMilliseconds(450);celebrateUntil=DateTime.UtcNow.AddSeconds(2.5);
  }
  static DataObject ShelfData(ShelfItem item){var d=new DataObject();if(item.Files!=null){d.SetData(DataFormats.FileDrop,item.Files);if(item.Files.Length==1&&new[]{".png",".jpg",".jpeg",".bmp",".gif"}.Contains(Path.GetExtension(item.Files[0]).ToLowerInvariant()))try{var image=new BitmapImage();image.BeginInit();image.CacheOption=BitmapCacheOption.OnLoad;using(var metadata=System.Drawing.Image.FromFile(item.Files[0])){if(metadata.Width>4096)image.DecodePixelWidth=4096;}image.UriSource=new Uri(item.Files[0]);image.EndInit();image.Freeze();d.SetData(DataFormats.Bitmap,image);}catch{}}else if(item.Image!=null)d.SetData(DataFormats.Bitmap,item.Image);else d.SetText(item.Text);return d;}
  static void Shelf(){
   var root=new Grid();root.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});root.RowDefinitions.Add(new RowDefinition());view.Children.Add(root);
-  var header=Stack(Orientation.Horizontal);header.Children.Add(T("Prateleira temporária",18));header.Children.Add(Btn("Limpar",()=>{shelf.Clear();Switch("shelf");}));root.Children.Add(header);
+  var header=Stack(Orientation.Horizontal);header.Children.Add(T("Prateleira temporária",18));header.Children.Add(Btn("Limpar",()=>{foreach(var x in shelf.ToArray())Forget(x);Switch("shelf");}));root.Children.Add(header);
   var scroll=new ScrollViewer{VerticalScrollBarVisibility=ScrollBarVisibility.Auto,Margin=new Thickness(0,8,0,0)};Grid.SetRow(scroll,1);root.Children.Add(scroll);var rows=Stack();scroll.Content=rows;
   if(shelf.Count==0){rows.Children.Add(T("Arraste imagens, arquivos ou textos para cá.",14));rows.Children.Add(T("Até 12 itens · expiram em 1 hora · nada é enviado",11,"#BDBDC5"));}
   foreach(var item in shelf.ToArray()){var captured=item;var row=Stack(Orientation.Horizontal);var copy=Btn(item.Name,()=>{Clipboard.SetDataObject(ShelfData(captured),true);celebrateUntil=DateTime.UtcNow.AddSeconds(2);},"Copiar para colar em outro aplicativo");copy.MaxWidth=440;copy.PreviewMouseMove+=(s,e)=>{if(e.LeftButton==MouseButtonState.Pressed&&e.GetPosition(copy).Y>copy.ActualHeight)DragDrop.DoDragDrop(copy,ShelfData(captured),DragDropEffects.Copy);};row.Children.Add(copy);row.Children.Add(Btn("×",()=>{shelf.Remove(captured);Switch("shelf");},"Remover"));rows.Children.Add(row);}
@@ -72,7 +73,7 @@ public partial class App {
  static void ExperienceTick(){
   SyncTick();ClipboardTick();PainelPoll();
   if(focusWasRunning&&!running&&remaining<=0)excitedUntil=DateTime.UtcNow.AddSeconds(5);focusWasRunning=running;
-  bool removed=shelf.RemoveAll(x=>DateTime.UtcNow-x.Added>TimeSpan.FromHours(1))>0;if(removed&&page=="shelf")Switch("shelf");
+  var expired=shelf.Where(x=>DateTime.UtcNow-x.Added>TimeSpan.FromHours(1)).ToArray();foreach(var x in expired)Forget(x);bool removed=expired.Length>0;if(removed&&page=="shelf")Switch("shelf");
   if(mediaWasPlaying&&!media.playing)celebrateUntil=DateTime.UtcNow.AddSeconds(1);mediaWasPlaying=media.playing;
   var now=DateTime.UtcNow;string mood=now<dizzyUntil?"dizzy":dropHover||now<curiousUntil?"curious":now<surprisedUntil?"surprised":now<excitedUntil?"excited":now<loveUntil?"love":now<celebrateUntil?"happy":chatBusy||now<agentBusyUntil?"thinking":batteryLow||painelHigh?"worry":running||now<typingUntil?"focus":media.playing?"music":now<winkUntil?"wink":DateTime.UtcNow-lastMascotInteraction>TimeSpan.FromSeconds(60)&&!keepAwake?"sleepy":"idle";
   if(mood=="excited"&&lastMood!="excited")Confetti();lastMood=mood;
