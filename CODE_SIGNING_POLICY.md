@@ -2,7 +2,7 @@
 
 ## Status
 
-**Application submitted on 2026-11-15; awaiting review.** Ilha has not yet been accepted by SignPath Foundation and no SignPath certificate is currently available to this project. Unsigned artifacts are labelled as such. Publishing the source alone does not remove Smart App Control restrictions.
+**Application submitted on 2026-11-15; awaiting review.** Tito has not yet been accepted by SignPath Foundation and no SignPath certificate is currently available to this project. Unsigned artifacts are labelled as such. Publishing the source alone does not remove Smart App Control restrictions.
 
 If accepted, the project will display the required attribution: “Free code signing provided by SignPath.io, certificate by SignPath Foundation”. This statement is conditional until service has actually been granted.
 
@@ -22,7 +22,7 @@ If accepted, the project will display the required attribution: “Free code sig
 5. Verify Authenticode signatures on every executable and runtime PowerShell script before labelling an artifact signed.
 6. Publish signed artifacts only after successful verification. Ordinary pushes and pull requests do not request signing.
 
-Product name: `Ilha`. Product/file version is defined once in `AssemblyInfo.cs` for both the launcher and runtime.
+Product name: `Tito`. Product/file version is defined once in `AssemblyInfo.cs` for both the launcher and runtime.
 
 No signing keys, API tokens, personal certificates or private runtime data belong in the repository.
 

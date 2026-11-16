@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-namespace Ilha {
+namespace Tito {
 public partial class App {
  // Settings: grouped cards with switches and link rows.
  static Border CardBox(UIElement child){return new Border{Background=B("#16FFFFFF"),CornerRadius=new CornerRadius(14),Padding=new Thickness(4),Margin=new Thickness(0,0,0,6),Child=child};}

@@ -1,6 +1,6 @@
 # Privacy
 
-Ilha keeps runtime data in the `Dados` directory beside its launcher. This directory is excluded from source control and distribution packages.
+Tito keeps runtime data in the `Dados` directory beside its launcher. This directory is excluded from source control and distribution packages.
 
 - Windows media titles, artists, cover thumbnails and playback state are read locally through the Windows media-session API.
 - Foreground window bounds, process names and selected game installation paths are checked locally to hide the island during games or full-screen use. A user-selected per-app hide list is stored locally.
