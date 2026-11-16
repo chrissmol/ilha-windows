@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
-namespace Ilha {
+namespace Tito {
 public partial class App {
  static int labMode;
  // Lab: walks every transition. Mode 1 times render frames (no capture load); mode 2 saves PNG frames per transition.

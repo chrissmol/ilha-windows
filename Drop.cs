@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Windows;
-namespace Ilha {
+namespace Tito {
 public partial class App {
  // Files dragged out of browsers, mail and zip archives are "virtual files" (FileGroupDescriptorW + FileContents).
  // They are saved as real files so the shelf hands back the same file, not a link.
