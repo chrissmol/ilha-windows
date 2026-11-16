@@ -33,8 +33,8 @@ public partial class App {
  static void Render(){
   ConfigureArtwork();
   view.Children.Clear();nav.Children.Clear();
-  if(page=="focus")Focus();else if(page=="music")SystemMusic();else if(page=="agent")LiveAgent();else if(page=="robo"){Robo();if(chatInput!=null)chatInput.Text=chatDraft;}else if(page=="shelf")Shelf();else if(page=="audio")AudioPanel();else if(page=="settings")Settings();else Dashboard();
-  var links=new[]{new[]{"home","home","HOME"},new[]{"music","music","MÍDIA"},new[]{"focus","focus","FOCUS"},new[]{"agent","agent","CLAUDE"},new[]{"robo","robo","ROBO"}};
+  if(page=="focus")Focus();else if(page=="music")SystemMusic();else if(page=="agent")LiveAgent();else if(page=="robo"){Robo();if(chatInput!=null)chatInput.Text=chatDraft;}else if(page=="shelf")Shelf();else if(page=="audio")AudioPanel();else if(page=="settings")Settings();else if(page=="notes")Notes();else if(page=="clipboard")ClipboardPage();else if(page=="agenda")Agenda();else Dashboard();
+  var links=new[]{new[]{"home","home","HOME"},new[]{"music","music","MÍDIA"},new[]{"focus","focus","FOCUS"},new[]{"agent","agent","CLAUDE"},new[]{"robo","robo","ROBO"},new[]{"agenda","agenda","AGENDA"},new[]{"notes","notes","NOTAS"},new[]{"clipboard","clipboard","COLAR"}};
   foreach(var link in links){string target=link[1];var b=Btn("",()=>{if(target=="music"){useSystem=true;player.Pause();playing=false;}Switch(target);},link[2]);b.Content=NavIcon(link[0],page==target?link[2]:null);if(page==target){b.Background=B("#22FFFFFF");b.Foreground=B("#FFFFFF");}nav.Children.Add(b);}
 
   view.Opacity=0;Animate(view,UIElement.OpacityProperty,1);

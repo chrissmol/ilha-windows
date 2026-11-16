@@ -82,7 +82,7 @@ public partial class App {
   if(expanded&&!opened)CaptureBackdrop();
   opened=expanded;int revision=++poseRevision;glass.Width=600;glass.Height=270;glass.HorizontalAlignment=HorizontalAlignment.Center;glass.VerticalAlignment=VerticalAlignment.Top;
   if(expanded){view.Visibility=Visibility.Visible;nav.Visibility=Visibility.Visible;date.Visibility=Visibility.Visible;time.Visibility=Visibility.Visible;compact.Visibility=Visibility.Collapsed;}
-  double width=expanded?600:compactWide?176:128,height=expanded?270:34;
+  double width=expanded?600:compactWide?compactWidth:128,height=expanded?270:34;
   var area=MonitorArea();w.Left=area.Left+(area.Width-640)/2;w.Top=area.Top;
   glass.IsHitTestVisible=expanded;restingShell.IsHitTestVisible=!expanded;
   if(animated){
@@ -105,7 +105,9 @@ public partial class App {
   if(!secondary)File.WriteAllLines(System.IO.Path.Combine(dataDir,"active.txt"),new[]{Process.GetCurrentProcess().Id.ToString(),Process.GetCurrentProcess().MainModule.FileName});
  }
  static void SpawnOtherIslands(){var screens=System.Windows.Forms.Screen.AllScreens;string exe=Process.GetCurrentProcess().MainModule.FileName;for(int i=0;i<screens.Length;i++)if(i!=selectedMonitor)try{Process.Start(new ProcessStartInfo(exe,"--monitor "+i+" --owner "+Process.GetCurrentProcess().Id){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=baseDir});}catch{}}
+ static DateTime nextBackdrop;
  static void PresenceTick(){
+  if(opened&&w.IsVisible&&DateTime.UtcNow>nextBackdrop){nextBackdrop=DateTime.UtcNow.AddMilliseconds(450);CaptureBackdrop();}
   if(secondary&&ownerProc!=null&&ownerProc.HasExited){w.Close();return;}
   if(restartSignal!=null&&restartSignal.WaitOne(0)){w.Close();return;}
   bool suppress=autoHideContext&&DesktopContext.Suppress(new WindowInteropHelper(w).Handle,hiddenApps);

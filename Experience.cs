@@ -10,7 +10,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Interop;
 namespace Ilha {
 public partial class App {
- static bool doNotDisturb,dropHover,compactWide;static int selectedMonitor;static TextBlock compactStatus;static bool focusWasRunning;static DateTime celebrateUntil;
+ static bool doNotDisturb,dropHover,compactWide;static double compactWidth=176;static string pillKey="";static int selectedMonitor;static TextBlock compactStatus;static bool focusWasRunning;static DateTime celebrateUntil;
  static MascotEyes headerMascot;static DateTime lastMascotInteraction=DateTime.UtcNow,gazeUntil,surprisedUntil;static Point lastGaze;static bool mediaWasPlaying;
  static DesktopAudio.PeakMonitor outputMeter;static System.Windows.Threading.DispatcherTimer waveTimer;
  sealed class ShelfItem {public string Name,Text;public string[] Files;public BitmapSource Image;public DateTime Added=DateTime.UtcNow;}
@@ -70,13 +70,14 @@ public partial class App {
   }catch{}
  }
  static void ExperienceTick(){
-  SyncTick();
+  SyncTick();ClipboardTick();
   if(focusWasRunning&&!running&&remaining<=0)celebrateUntil=DateTime.UtcNow.AddSeconds(8);focusWasRunning=running;
   bool removed=shelf.RemoveAll(x=>DateTime.UtcNow-x.Added>TimeSpan.FromHours(1))>0;if(removed&&page=="shelf")Switch("shelf");
   if(mediaWasPlaying&&!media.playing)celebrateUntil=DateTime.UtcNow.AddSeconds(1);mediaWasPlaying=media.playing;
   string mood=dropHover?"curious":DateTime.UtcNow<surprisedUntil?"surprised":DateTime.UtcNow<celebrateUntil?"happy":running?"focus":media.playing?"music":DateTime.UtcNow-lastMascotInteraction>TimeSpan.FromSeconds(60)?"sleepy":"idle";
   if(mascot!=null){mascot.Mood=mood;mascot.InvalidateVisual();}if(headerMascot!=null)headerMascot.Mood=mood;
-  if(compactStatus!=null){string text=running?Format(remaining):media.playing?"▂ ▅ ▃":"";compactStatus.Text=text;compactStatus.Foreground=running?B("#BC83FF"):Brushes.White;compactStatus.Visibility=text.Length>0?Visibility.Visible:Visibility.Collapsed;bool wide=text.Length>0;if(compactWide!=wide){compactWide=wide;if(!opened)SetPose(false,true);}}
+  if(compactStatus!=null){string text=running?Format(remaining):media.playing&&!String.IsNullOrEmpty(media.title)?media.title:"";compactStatus.MaxWidth=130;compactStatus.TextTrimming=TextTrimming.CharacterEllipsis;compactStatus.Text=text;compactStatus.Foreground=running?B("#BC83FF"):Brushes.White;compactStatus.Visibility=text.Length>0?Visibility.Visible:Visibility.Collapsed;bool wide=text.Length>0;double cw=running?176:230;if(compactWide!=wide||(wide&&compactWidth!=cw)){compactWide=wide;compactWidth=cw;if(!opened)SetPose(false,true);}
+  string key=media.playing&&glassTint.HasValue?"t"+glassTint.Value:"n";if(restingShell!=null&&key!=pillKey){pillKey=key;Color to=key=="n"?Color.FromRgb(5,5,6):Color.FromRgb((byte)(glassTint.Value.R*.42),(byte)(glassTint.Value.G*.42),(byte)(glassTint.Value.B*.42));var brush=new SolidColorBrush(restingShell.Background is SolidColorBrush?((SolidColorBrush)restingShell.Background).Color:to);restingShell.Background=brush;brush.BeginAnimation(SolidColorBrush.ColorProperty,new System.Windows.Media.Animation.ColorAnimation(to,TimeSpan.FromMilliseconds(450)));}}
  }
  static void CheckExperience(){
   var wave=new MascotEyes{Width=36,Height=20,MediaMode=true};wave.BeginAnimation(MascotEyes.MediaBlendProperty,null);wave.MediaBlend=1;wave.AudioPeak(Double.NaN);wave.AudioPeak(Double.PositiveInfinity);foreach(double peak in new[]{0,.01,.04,.1,.4,.8,1.0})wave.AudioPeak(peak);wave.BeginAnimation(MascotEyes.WaveStepProperty,null);wave.WaveStep=1;var waveShell=new Border{Width=128,Height=34,Background=Brushes.Black,CornerRadius=new CornerRadius(17),Child=wave};wave.HorizontalAlignment=HorizontalAlignment.Center;wave.VerticalAlignment=VerticalAlignment.Center;waveShell.Measure(new Size(128,34));waveShell.Arrange(new Rect(0,0,128,34));waveShell.UpdateLayout();var waveBitmap=new RenderTargetBitmap(128,34,96,96,PixelFormats.Pbgra32);waveBitmap.Render(waveShell);SavePng(waveBitmap,"preview-mascot-media.png");
