@@ -16,7 +16,7 @@ public partial class App {
  static Dictionary<string,object> painel;static int painelState;/*0 reading, 1 ok, 2 failed*/static bool painelBusy,painelHigh;static DateTime painelNext=DateTime.UtcNow.AddSeconds(2);
  static readonly Regex RxTs=new Regex("\"timestamp\":\"([^\"]+)\"",RegexOptions.Compiled),RxModel=new Regex("\"model\":\"([^\"]+)\"",RegexOptions.Compiled);
  static readonly Regex RxIn=new Regex("\"input_tokens\":(\\d+)",RegexOptions.Compiled),RxOut=new Regex("\"output_tokens\":(\\d+)",RegexOptions.Compiled),RxCreate=new Regex("\"cache_creation_input_tokens\":(\\d+)",RegexOptions.Compiled),RxRead=new Regex("\"cache_read_input_tokens\":(\\d+)",RegexOptions.Compiled);
- static readonly Regex RxLast=new Regex("\"last_token_usage\":\\{[^}]*?\"total_tokens\":(\\d+)",RegexOptions.Compiled),RxPrimary=new Regex("\"primary\":\\{[^}]*?\"used_percent\":([\\d.]+)",RegexOptions.Compiled),RxSecondary=new Regex("\"secondary\":\\{[^}]*?\"used_percent\":([\\d.]+)",RegexOptions.Compiled);
+ static readonly Regex RxLast=new Regex("\"last_token_usage\":\\{[^}]*?\"total_tokens\":(\\d+)",RegexOptions.Compiled),RxPrimaryReset=new Regex("\"primary\":\\{[^}]*?\"resets_at\":(\\d+)",RegexOptions.Compiled),RxPrimary=new Regex("\"primary\":\\{[^}]*?\"used_percent\":([\\d.]+)",RegexOptions.Compiled),RxSecondary=new Regex("\"secondary\":\\{[^}]*?\"used_percent\":([\\d.]+)",RegexOptions.Compiled);
  static long Tok(Regex rx,string line){var m=rx.Match(line);return m.Success?long.Parse(m.Groups[1].Value,CultureInfo.InvariantCulture):0;}
  static bool LocalDay(string line,out DateTime day){
   day=DateTime.MinValue;var m=RxTs.Match(line);DateTime parsed;
@@ -24,7 +24,7 @@ public partial class App {
   day=parsed.ToLocalTime().Date;return true;
  }
  // Windows paths of 260+ characters (long project names) need the \?\ prefix on .NET Framework.
- static string LongPath(string path){return path.Length>=240&&!path.StartsWith(@"\\?\")?@"\\?\"+path:path;}
+ static string LongPath(string path){return path.StartsWith(@"\\?\")?path:@"\\?\"+path;}
  static bool Old(string file,DateTime since){try{return File.GetLastWriteTime(LongPath(file)).Date<since;}catch{return true;}}
  static string[] SafeFiles(string dir,string pattern,SearchOption option){try{return Directory.GetFiles(LongPath(dir),pattern,option).Select(f=>f.StartsWith(@"\\?\")?f.Substring(4):f).ToArray();}catch{return new string[0];}}
  static IEnumerable<string> Lines(string file){
@@ -47,19 +47,19 @@ public partial class App {
     tokens[key]=(tokens.ContainsKey(key)?tokens[key]:0)+n;
    }
   }
-  string codexRoot=Path.Combine(home,".codex","sessions");DateTime limitAt=DateTime.MinValue;double primary=-1,secondary=-1;
+  string codexRoot=Path.Combine(home,".codex","sessions");DateTime limitAt=DateTime.MinValue;double primary=-1,secondary=-1,primaryReset=0;
   if(Directory.Exists(codexRoot))foreach(string file in SafeFiles(codexRoot,"rollout-*.jsonl",SearchOption.AllDirectories)){
    if(Old(file,since))continue;string current="?";
    foreach(string line in Lines(file)){
     if(line.IndexOf("\"turn_context\"",StringComparison.Ordinal)>=0){var model=RxModel.Match(line);if(model.Success)current=model.Groups[1].Value;continue;}
     if(line.IndexOf("\"token_count\"",StringComparison.Ordinal)<0)continue;
     DateTime day;if(!LocalDay(line,out day))continue;
-    var limit=RxPrimary.Match(line);if(limit.Success&&day>=limitAt){limitAt=day;primary=double.Parse(limit.Groups[1].Value,CultureInfo.InvariantCulture);var second=RxSecondary.Match(line);secondary=second.Success?double.Parse(second.Groups[1].Value,CultureInfo.InvariantCulture):-1;}
+    var limit=RxPrimary.Match(line);if(limit.Success&&day>=limitAt){limitAt=day;primary=double.Parse(limit.Groups[1].Value,CultureInfo.InvariantCulture);primaryReset=Tok(RxPrimaryReset,line);var second=RxSecondary.Match(line);secondary=second.Success?double.Parse(second.Groups[1].Value,CultureInfo.InvariantCulture):-1;}
     if(day<since)continue;Count(activity,day,"codex");if(day<tokenSince)continue;
     string key="codex|"+current;tokens[key]=(tokens.ContainsKey(key)?tokens[key]:0)+Tok(RxLast,line);
    }
   }
-  var codexLimits=new List<object>();if(primary>=0)codexLimits.Add(new Dictionary<string,object>{{"nome","Sessão"},{"pct",primary}});if(secondary>=0)codexLimits.Add(new Dictionary<string,object>{{"nome","Semana"},{"pct",secondary}});
+  var codexLimits=new List<object>();if(primary>=0)codexLimits.Add(new Dictionary<string,object>{{"nome","Sessão"},{"pct",primary},{"reinicia",primaryReset}});if(secondary>=0)codexLimits.Add(new Dictionary<string,object>{{"nome","Semana"},{"pct",secondary}});
   var claudeLimits=new List<object>();
   try{string plan=Path.Combine(appData,"Claude","plan-usage-history.json");if(File.Exists(plan)){var samples=(IList)json.Deserialize<Dictionary<string,object>>(File.ReadAllText(plan))["samples"];var u=((Dictionary<string,object>)samples[samples.Count-1])["u"] as Dictionary<string,object>;
    if(u!=null&&u.ContainsKey("fh"))claudeLimits.Add(new Dictionary<string,object>{{"nome","5 horas"},{"pct",Num(u["fh"])}});if(u!=null&&u.ContainsKey("sd"))claudeLimits.Add(new Dictionary<string,object>{{"nome","Semana"},{"pct",Num(u["sd"])}});}}catch{}
@@ -106,16 +106,19 @@ public partial class App {
    Directory.CreateDirectory(Path.Combine(home,".claude","projects","p"));Directory.CreateDirectory(Path.Combine(home,".codex","sessions","2026"));
    File.WriteAllText(Path.Combine(home,".claude","projects","p","a.jsonl"),"{\"type\":\"assistant\",\"timestamp\":\""+stamp+"\",\"message\":{\"model\":\"claude-x\",\"usage\":{\"input_tokens\":5,\"output_tokens\":7,\"cache_creation_input_tokens\":1,\"cache_read_input_tokens\":2}}}\n{\"type\":\"user\"}\nlixo\n");
    File.WriteAllText(Path.Combine(home,".codex","sessions","2026","rollout-1.jsonl"),"{\"type\":\"turn_context\",\"payload\":{\"model\":\"gpt-x\"}}\n{\"timestamp\":\""+stamp+"\",\"payload\":{\"type\":\"token_count\",\"info\":{\"last_token_usage\":{\"total_tokens\":9}},\"rate_limits\":{\"primary\":{\"used_percent\":12.5,\"resets_at\":1},\"secondary\":{\"used_percent\":40.0,\"resets_at\":2}}}}\n");
+   string longDir=Path.Combine(home,".claude","projects",new string('p',200));Directory.CreateDirectory(@"\\?\"+longDir);
+   File.WriteAllText(@"\\?\"+Path.Combine(longDir,"b.jsonl"),"{\"type\":\"assistant\",\"timestamp\":\""+stamp+"\",\"message\":{\"model\":\"claude-long\",\"usage\":{\"input_tokens\":1,\"output_tokens\":2}}}\n");
    var data=PainelScan(home,Path.Combine(home,"none"));var today=(Dictionary<string,object>)((Dictionary<string,object>)data["atividade"]).Values.First();
    var tokens=PainelList(data["tokens_por_modelo"]);var codex=PainelList(((Dictionary<string,object>)data["limites"])["codex"]);
-   if(Convert.ToInt32(today["claude"])!=1||Convert.ToInt32(today["codex"])!=1||!tokens.Any(t=>(string)t["modelo"]=="claude-x"&&Num(t["tokens"])==15)||!tokens.Any(t=>(string)t["modelo"]=="gpt-x"&&Num(t["tokens"])==9)||codex.Count!=2||Num(codex[0]["pct"])!=12.5||Num(codex[1]["pct"])!=40)throw new Exception("Painel IA log reader");
-  }finally{try{Directory.Delete(home,true);}catch{}}
+   if(Convert.ToInt32(today["claude"])!=2||Convert.ToInt32(today["codex"])!=1||!tokens.Any(t=>(string)t["modelo"]=="claude-x"&&Num(t["tokens"])==15)||!tokens.Any(t=>(string)t["modelo"]=="gpt-x"&&Num(t["tokens"])==9)||!tokens.Any(t=>(string)t["modelo"]=="claude-long"&&Num(t["tokens"])==3)||codex.Count!=2||Num(codex[0]["pct"])!=12.5||Num(codex[1]["pct"])!=40)throw new Exception("Painel IA log reader");
+  }finally{try{Directory.Delete(@"\\?\"+home,true);}catch{}}
  }
  static Border Tile(string title,UIElement content,int column){
   var stack=Stack();var label=T(title,9.5,"#AFA9B4");label.Margin=new Thickness(0,0,0,6);stack.Children.Add(label);stack.Children.Add(content);
   var tile=new Border{Background=B("#16FFFFFF"),CornerRadius=new CornerRadius(14),Padding=new Thickness(11,9,11,9),Margin=new Thickness(column==0?0:4,0,column==2?0:4,0),Child=stack};Grid.SetColumn(tile,column);return tile;
  }
- static UIElement LimitRow(string label,double pct){
+ static UIElement LimitRow(string label,double pct,double resets=0){
+  if(resets>0&&resets<=(DateTime.UtcNow-new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc)).TotalSeconds){pct=0;label+=" · renovou";}
   pct=Math.Max(0,Math.Min(100,pct));string color=pct>=90?"#FF453A":pct>=70?"#FF9F0A":"#30D158";
   var head=new Grid();head.Children.Add(T(label,11.5));var value=T(Math.Round(pct)+"%",11.5,color);value.HorizontalAlignment=HorizontalAlignment.Right;head.Children.Add(value);
   var bar=new Grid{Height=6,Margin=new Thickness(0,3,0,7)};bar.Children.Add(new Border{Background=B("#26FFFFFF"),CornerRadius=new CornerRadius(3)});
@@ -135,7 +138,7 @@ public partial class App {
   }
   for(int i=0;i<3;i++)root.ColumnDefinitions.Add(new ColumnDefinition{Width=new GridLength(i==0?1.15:1,GridUnitType.Star)});
   var limits=Stack();var rows=PainelLimits();
-  foreach(var l in rows)limits.Children.Add(LimitRow((Convert.ToString(l["ia"])=="claude"?"Claude":"Codex")+" · "+Convert.ToString(l["nome"]),Num(l["pct"])));
+  foreach(var l in rows)limits.Children.Add(LimitRow((Convert.ToString(l["ia"])=="claude"?"Claude":"Codex")+" · "+Convert.ToString(l["nome"]),Num(l["pct"]),l.ContainsKey("reinicia")?Num(l["reinicia"]):0));
   foreach(string who in new[]{"claude","codex"})if(!rows.Any(l=>Convert.ToString(l["ia"])==who)){var none=T((who=="claude"?"Claude":"Codex")+": sem leitura do plano",10.5,"#AFA9B4");none.TextWrapping=TextWrapping.Wrap;none.Margin=new Thickness(0,0,0,4);limits.Children.Add(none);}
   root.Children.Add(Tile("LIMITES",limits,0));
   var used=Stack();var tokens=painel.ContainsKey("tokens_por_modelo")?PainelList(painel["tokens_por_modelo"]):new List<Dictionary<string,object>>();

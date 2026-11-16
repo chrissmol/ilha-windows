@@ -26,7 +26,7 @@ public static class DesktopAudio {
  [ComImport,Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] interface IDevices {
   void EnumAudioEndpoints(int flow,uint mask,out ICollection devices);void GetDefaultAudioEndpoint(int flow,int role,out IDevice device);void GetDevice([MarshalAs(UnmanagedType.LPWStr)]string id,out IDevice device);
  }
- [ComImport,Guid("0BD7A1BE-7A1A-44DB-8397-C0A4D7BEB62B"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] interface ICollection {void GetCount(out uint count);void Item(uint index,out IDevice device);}
+ [ComImport,Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] interface ICollection {void GetCount(out uint count);void Item(uint index,out IDevice device);}
  [ComImport,Guid("D666063F-1587-4E43-81F1-B948E807363F"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)] interface IDevice {void Activate(ref Guid iid,uint context,IntPtr parameters,[MarshalAs(UnmanagedType.IUnknown)]out object value);void OpenPropertyStore(uint access,out IProperties store);void GetId([MarshalAs(UnmanagedType.LPWStr)]out string id);void GetState(out uint state);}
  [StructLayout(LayoutKind.Sequential)] struct Key {public Guid Format;public uint Id;}
  [StructLayout(LayoutKind.Explicit,Size=24)] struct Variant {[FieldOffset(0)]public ushort Type;[FieldOffset(8)]public IntPtr Value;}
