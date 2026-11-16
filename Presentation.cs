@@ -10,7 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-namespace Ilha {
+namespace Tito {
 public sealed class LyricLine {public double Time;public string Text;}
 public static class Lrc {
  public static List<LyricLine> Parse(string content){
@@ -67,6 +67,7 @@ public partial class App {
   string current=has?(index>=0?lyrics[index].Text:lyrics[0].Text):(String.IsNullOrWhiteSpace(media.title)?"Nada tocando agora":media.title);
   lyricBefore.Text=has&&index>0?lyrics[index-1].Text:"";
   lyricAfter.Text=has&&index>=0&&index+1<lyrics.Count?lyrics[index+1].Text:has?"":media.artist??"";
+  lyricAfter.Foreground=has||!glassTint.HasValue?B("#88DAD1C9"):new SolidColorBrush(glassTint.Value);lyricAfter.FontWeight=has?FontWeights.Normal:FontWeights.SemiBold;
   lyricCurrent.Text=current;
   if(displayedLyric!=current){displayedLyric=current;lyricCurrent.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(.45,1,TimeSpan.FromMilliseconds(200)));}
  }
@@ -84,7 +85,7 @@ public partial class App {
  }
  static void Capture(string name){
   glass.BeginAnimation(UIElement.OpacityProperty,null);glass.Opacity=1;
-  view.BeginAnimation(UIElement.OpacityProperty,null);view.Opacity=1;
+  view.BeginAnimation(UIElement.OpacityProperty,null);view.Opacity=1;view.RenderTransform=null;
   glass.Width=600;glass.Height=270;glass.Measure(new Size(600,270));glass.Arrange(new Rect(0,0,600,270));glass.UpdateLayout();
   var bmp=new RenderTargetBitmap(600,270,96,96,PixelFormats.Pbgra32);bmp.Render(glass);var matte=new DrawingVisual();using(var dc=matte.RenderOpen()){dc.DrawRoundedRectangle(B("#101014"),null,new Rect(0,0,600,270),24,24);dc.DrawImage(bmp,new Rect(0,0,600,270));}var composited=new RenderTargetBitmap(600,270,96,96,PixelFormats.Pbgra32);composited.Render(matte);SavePng(composited,"preview-"+name+".png");
  }
@@ -93,7 +94,8 @@ public partial class App {
  static void CaptureMorphFrame(int index){
   var visual=new DrawingVisual();using(var dc=visual.RenderOpen()){
    dc.DrawRectangle(B("#20252E"),null,new Rect(0,0,640,302));
-   if(w.IsVisible){double width=Math.Max(1,w.ActualWidth),height=Math.Max(1,w.ActualHeight);var rect=new Rect((640-width)/2,12,width,height);dc.DrawRoundedRectangle(B("#101014"),null,rect,Math.Min(24,height/2),Math.Min(24,height/2));dc.DrawRectangle(new VisualBrush(windowHost){Stretch=Stretch.Fill},null,rect);}
+   if(w.IsVisible){double width=Math.Max(1,islandClip.Rect.Width),height=Math.Max(1,islandClip.Rect.Height);var rect=new Rect((640-width)/2,12,width,height);dc.DrawRoundedRectangle(B("#101014"),null,rect,Math.Min(24,height/2),Math.Min(24,height/2));dc.DrawRectangle(new VisualBrush(island){ViewboxUnits=BrushMappingMode.Absolute,Viewbox=islandClip.Rect,Stretch=Stretch.Fill},null,rect);}
+   dc.DrawRectangle(new VisualBrush(confettiLayer){Stretch=Stretch.None,AlignmentX=AlignmentX.Left,AlignmentY=AlignmentY.Top},null,new Rect(0,4,640,300));
   }
   var bmp=new RenderTargetBitmap(640,302,96,96,PixelFormats.Pbgra32);bmp.Render(visual);bmp.Freeze();morphFrames.Add(bmp);
  }
@@ -106,6 +108,7 @@ public partial class App {
   lyrics=Lrc.Parse("[00:00]Lights settle on the skyline\n[00:35]A quiet moment, just for us\n[00:55]The city slows into the night");lyricsFor=TrackKey();
   foreach(string p in new[]{"home","music","focus"}){Switch(p);Capture("reference-"+p);}
   var savedChat=conversation;conversation=new List<Dictionary<string,string>>{new Dictionary<string,string>{{"role","user"},{"content","What is left tonight?"}},new Dictionary<string,string>{{"role","assistant"},{"content","One focus session, then time to rest."}}};Switch("robo");Capture("reference-robo");conversation=savedChat;
+  var savedPainel=painel;var savedState=painelState;PainelSet(json.Deserialize<Dictionary<string,object>>(@"{""atividade"":{""2026-11-10"":{""claude"":394,""codex"":20},""2026-11-03"":{""claude"":120},""2026-10-20"":{""codex"":80},""2026-10-06"":{""claude"":946},""2026-09-29"":{""claude"":300,""codex"":629},""2026-11-16"":{""claude"":613}},""limites"":{""codex"":[{""nome"":""Sessão"",""pct"":13.0},{""nome"":""Semana"",""pct"":72.0}],""claude"":[{""nome"":""5 horas"",""pct"":93.0}]},""claude_uso"":{""h5"":12300000,""msgs5"":214,""semana"":88000000,""hoje"":9100000},""tokens_por_modelo"":[{""ia"":""claude"",""modelo"":""claude-sonnet-5-5"",""tokens"":125747485},{""ia"":""claude"",""modelo"":""claude-fable-5-2"",""tokens"":102482569},{""ia"":""codex"",""modelo"":""gpt-5.6-luna"",""tokens"":1722320}]}"));Switch("painel");Capture("reference-painel");painelState=0;Switch("painel");Capture("reference-painel-loading");painel=savedPainel;painelState=savedState;painelHigh=false;
   media=saved;lyrics=savedLyrics;lyricsFor=savedKey;
   File.WriteAllText(System.IO.Path.Combine(dataDir,"preview-notes.txt"),"reference-* images use explicit visual test fixtures. They do not show live playback or a live AI response. Offscreen renders use a neutral dark matte; native desktop acrylic is not included.");
  }

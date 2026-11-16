@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Diagnostics;
@@ -9,7 +9,7 @@ using System.Windows.Interop;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-namespace Ilha {
+namespace Tito {
 public static class DesktopContext {
  [StructLayout(LayoutKind.Sequential)] public struct Rect {public int Left,Top,Right,Bottom;}
  [StructLayout(LayoutKind.Sequential)] struct MonitorInfo {public int Size;public Rect Monitor,Work;public uint Flags;}
@@ -18,6 +18,7 @@ public static class DesktopContext {
  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr window,out uint pid);
  [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hwnd,out Rect rect);
  [DllImport("user32.dll")] static extern bool IsIconic(IntPtr hwnd);
+ [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr hwnd);
  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr hwnd);
  [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr hwnd,System.Text.StringBuilder name,int length);
  [DllImport("user32.dll")] static extern IntPtr MonitorFromWindow(IntPtr hwnd,uint flags);
@@ -31,7 +32,14 @@ public static class DesktopContext {
  static uint cachedPid;static string cachedName="",cachedPath="";
  public static string ForegroundApp="";
  public static void HideFromSwitcher(Window window){var hwnd=new WindowInteropHelper(window).Handle;int style=GetWindowLong(hwnd,-20);SetWindowLong(hwnd,-20,(style|0x80)&~0x40000);}
+ public static bool CursorInside(Window window,double dipWidth,double dipHeight,double margin){
+  CursorPoint p;Rect r;var hwnd=new WindowInteropHelper(window).Handle;if(hwnd==IntPtr.Zero||!GetCursorPos(out p)||!GetWindowRect(hwnd,out r))return false;
+  double s=(r.Right-r.Left)/640.0,cx=(r.Left+r.Right)/2.0;
+  return p.X>=cx-(dipWidth/2+margin)*s&&p.X<=cx+(dipWidth/2+margin)*s&&p.Y>=r.Top+(8-margin)*s&&p.Y<=r.Top+(8+dipHeight+margin)*s;
+ }
  public static bool IsToolWindow(IntPtr hwnd){int style=GetWindowLong(hwnd,-20);return (style&0x80)!=0&&(style&0x40000)==0;}
+ // Fullscreen = the shell says so (game, presentation) or a window covers the monitor; a maximized window that keeps its title bar is not fullscreen.
+ public static bool IsFullscreen(bool covers,bool zoomed,bool caption,int state){return state==2||state==3||state==4||(covers&&!(zoomed&&caption));}
  public static bool CoversMonitor(Rect rect,Rect monitor){return rect.Left<=monitor.Left+2&&rect.Top<=monitor.Top+2&&rect.Right>=monitor.Right-2&&rect.Bottom>=monitor.Bottom-2;}
  public static bool Suppress(IntPtr ownWindow,ISet<string> hiddenApps){
   var hwnd=GetForegroundWindow();if(hwnd==IntPtr.Zero||hwnd==ownWindow||!IsWindowVisible(hwnd)||IsIconic(hwnd))return false;
@@ -40,6 +48,7 @@ public static class DesktopContext {
   uint pid;GetWindowThreadProcessId(hwnd,out pid);
   if(pid!=cachedPid){cachedPid=pid;cachedName="";cachedPath="";try{using(var p=Process.GetProcessById((int)pid)){cachedName=p.ProcessName;try{cachedPath=p.MainModule.FileName;}catch{}}}catch{}}
   if(!String.Equals(cachedName,"explorer",StringComparison.OrdinalIgnoreCase)&&!String.Equals(cachedName,"ShellExperienceHost",StringComparison.OrdinalIgnoreCase)&&!String.IsNullOrEmpty(cachedName))ForegroundApp=cachedName;
+  if(MonitorFromWindow(hwnd,2)!=MonitorFromWindow(ownWindow,2))return false;
   if(hiddenApps.Contains(cachedName))return true;
   if(name=="UnrealWindow"||name=="UnityWndClass")return true;
   if(cachedPath.IndexOf("\\steamapps\\common\\",StringComparison.OrdinalIgnoreCase)>=0)return true;
@@ -47,18 +56,20 @@ public static class DesktopContext {
   string[] known={"cs2","dota2","VALORANT-Win64-Shipping","FortniteClient-Win64-Shipping","Minecraft.Windows","RobloxPlayerBeta","RocketLeague","GenshinImpact","League of Legends","Overwatch","r5apex","RainbowSix","cod"};if(known.Contains(cachedName,StringComparer.OrdinalIgnoreCase))return true;
   var monitor=new MonitorInfo{Size=Marshal.SizeOf(typeof(MonitorInfo))};if(!GetMonitorInfo(MonitorFromWindow(hwnd,2),ref monitor))return false;
   Rect rect;if(DwmGetWindowAttribute(hwnd,9,out rect,Marshal.SizeOf(typeof(Rect)))!=0&&!GetWindowRect(hwnd,out rect))return false;
-  if(CoversMonitor(rect,monitor.Monitor))return true;
-  int state;return SHQueryUserNotificationState(out state)==0&&(state==2||state==3||state==4);
+  int state;if(SHQueryUserNotificationState(out state)!=0)state=-1;
+  return IsFullscreen(CoversMonitor(rect,monitor.Monitor),IsZoomed(hwnd),(GetWindowLong(hwnd,-16)&0xC00000)==0xC00000,state);
  }
  public static Point Gaze(Window window){
   CursorPoint point;if(!GetCursorPos(out point))return new Point();
   Rect rect;if(!GetWindowRect(new WindowInteropHelper(window).Handle,out rect))return new Point();
-  double cx=(rect.Left+rect.Right)/2.0,cy=(rect.Top+rect.Bottom)/2.0;
-  return new Point(Math.Max(-2,Math.Min(2,(point.X-cx)/180)),Math.Max(-1,Math.Min(1,(point.Y-cy)/180)));
+  double cx=(rect.Left+rect.Right)/2.0,cy=rect.Top+25*(rect.Bottom-rect.Top)/300.0;
+  return new Point(2.6*Math.Tanh((point.X-cx)/260.0),1.4*Math.Tanh((point.Y-cy)/160.0));
  }
 }
 public partial class App {
- static Border restingShell;static MascotEyes mascot;static Grid windowHost;
+ static Border restingShell;static MascotEyes mascot;static Grid windowHost,island;
+ static RectangleGeometry islandClip;static DispatcherTimer hoverTimer;
+ static bool secondary;static int ownerPid;static Process ownerProc;static string suffix="";
  static bool contextHidden,autoHideContext=true;
  static HashSet<string> hiddenApps=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
  static DateTime nextBlink=DateTime.UtcNow.AddSeconds(3);static Random random=new Random();
@@ -67,41 +78,64 @@ public partial class App {
   if(!SystemParameters.ClientAreaAnimation)animated=false;
   opened=expanded;int revision=++poseRevision;glass.Width=600;glass.Height=270;glass.HorizontalAlignment=HorizontalAlignment.Center;glass.VerticalAlignment=VerticalAlignment.Top;
   if(expanded){view.Visibility=Visibility.Visible;nav.Visibility=Visibility.Visible;date.Visibility=Visibility.Visible;time.Visibility=Visibility.Visible;compact.Visibility=Visibility.Collapsed;}
-  double width=expanded?600:compactWide?176:128,height=expanded?270:34;
-  var area=MonitorArea();double left=area.Left+(area.Width-width)/2;w.Top=area.Top+8;
+  double width=expanded?600:compactWide?compactWidth:128,height=expanded?270:34;
+  var area=MonitorArea();w.Left=area.Left+(area.Width-640)/2;w.Top=area.Top;
+  if(!expanded){restingShell.Width=width;restingShell.Height=height;}
   glass.IsHitTestVisible=expanded;restingShell.IsHitTestVisible=!expanded;
   if(animated){
    glass.Visibility=Visibility.Visible;restingShell.Visibility=Visibility.Visible;
-   Animate(w,Window.WidthProperty,width);Animate(w,Window.HeightProperty,height);Animate(w,Window.LeftProperty,left);
-   var panelFade=new System.Windows.Media.Animation.DoubleAnimation(expanded?1:0,TimeSpan.FromMilliseconds(expanded?260:140)){BeginTime=expanded?TimeSpan.FromMilliseconds(90):TimeSpan.Zero};
+   MorphTo(width,height,expanded);
+   var scale=new ScaleTransform(expanded?.94:1,expanded?.94:1);glass.RenderTransformOrigin=new Point(.5,0);glass.RenderTransform=scale;
+   if(expanded){var grow=new System.Windows.Media.Animation.DoubleAnimation(1,TimeSpan.FromMilliseconds(460)){BeginTime=TimeSpan.FromMilliseconds(60),EasingFunction=new System.Windows.Media.Animation.CubicEase{EasingMode=System.Windows.Media.Animation.EasingMode.EaseOut}};scale.BeginAnimation(ScaleTransform.ScaleXProperty,grow);scale.BeginAnimation(ScaleTransform.ScaleYProperty,grow);}
+   var panelFade=new System.Windows.Media.Animation.DoubleAnimation(expanded?1:0,TimeSpan.FromMilliseconds(expanded?240:90)){BeginTime=expanded?TimeSpan.FromMilliseconds(110):TimeSpan.Zero};
    panelFade.Completed+=(s,e)=>{if(revision==poseRevision&&!expanded)glass.Visibility=Visibility.Collapsed;};glass.BeginAnimation(UIElement.OpacityProperty,panelFade);
    var faceFade=new System.Windows.Media.Animation.DoubleAnimation(expanded?0:1,TimeSpan.FromMilliseconds(180));
    faceFade.Completed+=(s,e)=>{if(revision==poseRevision&&expanded)restingShell.Visibility=Visibility.Collapsed;};restingShell.BeginAnimation(UIElement.OpacityProperty,faceFade);
   }else{
-   w.BeginAnimation(Window.WidthProperty,null);w.BeginAnimation(Window.HeightProperty,null);w.BeginAnimation(Window.LeftProperty,null);w.Width=width;w.Height=height;w.Left=left;
-   glass.BeginAnimation(UIElement.OpacityProperty,null);restingShell.BeginAnimation(UIElement.OpacityProperty,null);glass.Opacity=expanded?1:0;restingShell.Opacity=expanded?0:1;
+   islandClip.BeginAnimation(RectangleGeometry.RectProperty,null);islandClip.BeginAnimation(RectangleGeometry.RadiusXProperty,null);islandClip.BeginAnimation(RectangleGeometry.RadiusYProperty,null);SetClip(width,height);
+   glass.RenderTransform=null;glass.BeginAnimation(UIElement.OpacityProperty,null);restingShell.BeginAnimation(UIElement.OpacityProperty,null);glass.Opacity=expanded?1:0;restingShell.Opacity=expanded?0:1;
    glass.Visibility=expanded?Visibility.Visible:Visibility.Collapsed;restingShell.Visibility=expanded?Visibility.Collapsed:Visibility.Visible;
   }
  }
  static void SetupPresence(){
   string apps=System.IO.Path.Combine(dataDir,"hidden-apps.txt");if(File.Exists(apps))foreach(var line in File.ReadAllLines(apps))if(!String.IsNullOrWhiteSpace(line))hiddenApps.Add(line.Trim());
-  openSignal=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.AutoReset,"Local\\IlhaGlassOpen");
-  restartSignal=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.AutoReset,"Local\\IlhaGlassRestart");
-  File.WriteAllLines(System.IO.Path.Combine(dataDir,"active.txt"),new[]{Process.GetCurrentProcess().Id.ToString(),Process.GetCurrentProcess().MainModule.FileName});
+  openSignal=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.AutoReset,"Local\\TitoGlassOpen"+suffix);
+  restartSignal=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.AutoReset,"Local\\TitoGlassRestart"+suffix);
+  if(!secondary)File.WriteAllLines(System.IO.Path.Combine(dataDir,"active.txt"),new[]{Process.GetCurrentProcess().Id.ToString(),Process.GetCurrentProcess().MainModule.FileName});
+ }
+
+ static DateTime lastGazeTick=DateTime.UtcNow;static Point gazeNow;
+ static void GazeTick(){
+  var now=DateTime.UtcNow;double dt=Math.Min(.1,(now-lastGazeTick).TotalSeconds);lastGazeTick=now;
+  var m=opened?headerMascot:mascot;var other=opened?mascot:headerMascot;if(m==null)return;
+  if(other!=null&&(other.GazeX!=0||other.GazeY!=0)){other.GazeX=0;other.GazeY=0;other.InvalidateVisual();}
+  Point target=DesktopContext.Gaze(w);if((target-lastGaze).Length>.05){gazeUntil=now.AddMilliseconds(1600);lastGaze=target;}
+  if(now>gazeUntil)target=new Point();if(now<quirkUntil)target=quirkGaze;
+  double k=1-Math.Exp(-dt/(target.X!=0||target.Y!=0?.07:.24));var next=new Point(gazeNow.X+(target.X-gazeNow.X)*k,gazeNow.Y+(target.Y-gazeNow.Y)*k);
+  if((next-gazeNow).Length>.004){gazeNow=next;m.GazeX=next.X;m.GazeY=next.Y;m.InvalidateVisual();}
+ }
+ static void HoverTick(){
+  if(uiTest||contextHidden||!w.IsVisible)return;
+  GazeTick();
+  double tw=opened?600:(compactWide?compactWidth:128),th=opened?270:34;bool inside=DesktopContext.CursorInside(w,tw,th,opened?2:0);
+  if(opened){if(!inside&&System.Windows.Input.Mouse.Captured==null&&!dropHover)Expand(false);}else if(inside&&!doNotDisturb)Expand(true);
  }
  static void PresenceTick(){
+  SyncFullscreenHide();
+  if(secondary&&ownerProc!=null&&ownerProc.HasExited){w.Close();return;}
   if(restartSignal!=null&&restartSignal.WaitOne(0)){w.Close();return;}
   bool suppress=autoHideContext&&DesktopContext.Suppress(new WindowInteropHelper(w).Handle,hiddenApps);
   if(suppress&&!contextHidden){contextHidden=true;leaveTimer.Stop();SetPose(false,false);w.Hide();}
   else if(!suppress&&contextHidden){contextHidden=false;SetPose(false,false);w.Show();}
   if(openSignal!=null&&openSignal.WaitOne(0)&&!contextHidden){w.Show();Expand(true);}
   if(!opened&&mascot!=null&&!contextHidden){
-   Point gaze=DesktopContext.Gaze(w);if((gaze-lastGaze).Length>.06){gazeUntil=DateTime.UtcNow.AddMilliseconds(1300);lastGaze=gaze;}if(DateTime.UtcNow>gazeUntil)gaze=new Point();mascot.GazeX+=(gaze.X-mascot.GazeX)*.35;mascot.GazeY+=(gaze.Y-mascot.GazeY)*.35;mascot.InvalidateVisual();
+   
+   if(DateTime.UtcNow>=nextQuirk){nextQuirk=DateTime.UtcNow.AddSeconds(14+random.NextDouble()*16);if(mascot.Mood=="idle"){int q=random.Next(3);if(q==0)winkUntil=DateTime.UtcNow.AddMilliseconds(800);else if(q==1){quirkGaze=new Point(random.Next(2)==0?-2:2,0);quirkUntil=DateTime.UtcNow.AddMilliseconds(1300);}else mascot.Hop(1);}}
    if(DateTime.UtcNow>=nextBlink){mascot.BlinkOnce();nextBlink=DateTime.UtcNow.AddSeconds(3+random.NextDouble()*4);}
   }
  }
  static void Restart(){
-  string launcher=System.IO.Path.Combine(baseDir,"Ilha.exe");
+  string launcher=System.IO.Path.Combine(baseDir,"Tito.exe");
   Process.Start(new ProcessStartInfo(launcher,"--wait "+Process.GetCurrentProcess().Id){UseShellExecute=false,CreateNoWindow=true});w.Close();
  }
  static void HideCurrentApp(){

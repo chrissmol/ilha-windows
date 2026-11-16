@@ -9,8 +9,8 @@ if($certificate.Subject -eq $certificate.Issuer){throw 'Certificados autoassinad
 if($certificate.NotAfter -le (Get-Date)){throw 'O certificado expirou.'}
 $runtime=Join-Path $PSScriptRoot ([IO.File]::ReadAllText((Join-Path $PSScriptRoot 'current-version.txt')).Trim())
 $root=[IO.Path]::GetFullPath($PSScriptRoot)+[IO.Path]::DirectorySeparatorChar
-if(-not [IO.Path]::GetFullPath($runtime).StartsWith($root,[StringComparison]::OrdinalIgnoreCase)){throw 'Caminho da versão fora da pasta da Ilha.'}
-$files=@('Ilha.exe','IlhaGlass.exe','MediaBridge.ps1','ClaudeHook.ps1')|ForEach-Object {Join-Path $PSScriptRoot $_}
+if(-not [IO.Path]::GetFullPath($runtime).StartsWith($root,[StringComparison]::OrdinalIgnoreCase)){throw 'Caminho da versão fora da pasta do Tito.'}
+$files=@('Tito.exe','TitoGlass.exe','MediaBridge.ps1','ClaudeHook.ps1')|ForEach-Object {Join-Path $PSScriptRoot $_}
 $files+= $runtime
 foreach($file in $files){
  $signature=Set-AuthenticodeSignature -LiteralPath $file -Certificate $certificate -HashAlgorithm SHA256 -TimestampServer $TimestampServer

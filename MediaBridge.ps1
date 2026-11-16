@@ -16,6 +16,7 @@ try {
  $propsType=[Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties,Windows.Media.Control,ContentType=WindowsRuntime]
  $streamType=[Windows.Storage.Streams.IRandomAccessStreamWithContentType,Windows.Storage.Streams,ContentType=WindowsRuntime]
  $asTask=[System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {$_.Name -eq 'AsTask' -and $_.IsGenericMethod -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1'} | Select-Object -First 1
+ $asRead=[System.IO.WindowsRuntimeStreamExtensions].GetMethods() | Where-Object {$_.Name -eq 'AsStreamForRead' -and $_.GetParameters().Count -eq 1} | Select-Object -First 1
  function Await($operation,[Type]$type) { $task=$asTask.MakeGenericMethod($type).Invoke($null,@($operation));if(-not $task.Wait(3000)){throw 'A leitura da mídia excedeu o tempo limite.'};return $task.Result }
  $manager=Await ($managerType::RequestAsync()) $managerType
  $lastKey='';$cover='';$lastCommand=''
@@ -63,10 +64,10 @@ try {
      if($null -ne $props.Thumbnail){
       try{
        $stream=Await ($props.Thumbnail.OpenReadAsync()) $streamType
-       $inputStream=[System.IO.WindowsRuntimeStreamExtensions]::AsStreamForRead($stream)
+       $inputStream=$asRead.Invoke($null,@($stream.psobject.BaseObject))
        $sha=[Security.Cryptography.SHA256]::Create();$hash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($key))).Replace('-','').Substring(0,20);$sha.Dispose()
        $cover=Join-Path $data ('cover-'+$hash+'.jpg')
-       $outputStream=[IO.File]::Create($cover);try{$inputStream.CopyTo($outputStream)}finally{$outputStream.Dispose();$inputStream.Dispose();$stream.Dispose()}
+       $outputStream=[IO.File]::Create($cover);try{$inputStream.CopyTo($outputStream)}finally{$outputStream.Dispose();$inputStream.Dispose();try{[void][Runtime.InteropServices.Marshal]::ReleaseComObject($stream.psobject.BaseObject)}catch{}}
       }catch{$cover=''}
      }
     }
