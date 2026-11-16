@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-namespace Ilha {
+namespace Tito {
 public partial class App {
  // Color and play: every drawer has its own color (glow, buttons, headings), the active tab bounces, and finished work throws confetti.
  static string PageHex(string p){string a=Accent(p);return a=="#FFFFFF"?"#9C9CD8":a;}

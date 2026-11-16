@@ -9,7 +9,7 @@ using System.Windows.Interop;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-namespace Ilha {
+namespace Tito {
 public static class DesktopContext {
  [StructLayout(LayoutKind.Sequential)] public struct Rect {public int Left,Top,Right,Bottom;}
  [StructLayout(LayoutKind.Sequential)] struct MonitorInfo {public int Size;public Rect Monitor,Work;public uint Flags;}
@@ -99,8 +99,8 @@ public partial class App {
  }
  static void SetupPresence(){
   string apps=System.IO.Path.Combine(dataDir,"hidden-apps.txt");if(File.Exists(apps))foreach(var line in File.ReadAllLines(apps))if(!String.IsNullOrWhiteSpace(line))hiddenApps.Add(line.Trim());
-  openSignal=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.AutoReset,"Local\\IlhaGlassOpen"+suffix);
-  restartSignal=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.AutoReset,"Local\\IlhaGlassRestart"+suffix);
+  openSignal=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.AutoReset,"Local\\TitoGlassOpen"+suffix);
+  restartSignal=new System.Threading.EventWaitHandle(false,System.Threading.EventResetMode.AutoReset,"Local\\TitoGlassRestart"+suffix);
   if(!secondary)File.WriteAllLines(System.IO.Path.Combine(dataDir,"active.txt"),new[]{Process.GetCurrentProcess().Id.ToString(),Process.GetCurrentProcess().MainModule.FileName});
  }
 
@@ -135,7 +135,7 @@ public partial class App {
   }
  }
  static void Restart(){
-  string launcher=System.IO.Path.Combine(baseDir,"Ilha.exe");
+  string launcher=System.IO.Path.Combine(baseDir,"Tito.exe");
   Process.Start(new ProcessStartInfo(launcher,"--wait "+Process.GetCurrentProcess().Id){UseShellExecute=false,CreateNoWindow=true});w.Close();
  }
  static void HideCurrentApp(){

@@ -10,7 +10,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-namespace Ilha {
+namespace Tito {
 public sealed class LyricLine {public double Time;public string Text;}
 public static class Lrc {
  public static List<LyricLine> Parse(string content){

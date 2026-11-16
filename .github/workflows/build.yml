@@ -17,6 +17,35 @@ permissions:
   actions: read
 
 jobs:
+  motor:
+    # Real end-to-end check of the embedded AI: downloads engine + model, verifies hashes, starts llama-server, chats once.
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Compile
+        shell: powershell
+        run: .\Compilar.ps1
+      - name: Embedded AI end to end
+        shell: powershell
+        run: |
+          $root = (Get-Location).Path
+          $env:TITO_ROOT = $root
+          $runtime = Join-Path $root ([IO.File]::ReadAllText((Join-Path $root 'current-version.txt')).Trim())
+          $p = Start-Process -FilePath $runtime -ArgumentList '--motor-test' -WindowStyle Hidden -PassThru
+          if (-not $p.WaitForExit(1500000)) { $p.Kill(); throw 'motor-test timed out' }
+          Get-Content (Join-Path $root 'Dados\motor-test.txt')
+          if ($p.ExitCode -ne 0) { throw ('motor-test failed: ' + $p.ExitCode) }
+      - name: Report engine signature (Smart App Control notes)
+        if: always()
+        shell: powershell
+        run: |
+          Get-ChildItem Dados\motor -ErrorAction SilentlyContinue -Recurse -Filter 'llama-server.exe' | ForEach-Object {
+            $s = Get-AuthenticodeSignature $_.FullName
+            "$($_.FullName): $($s.Status) $($s.SignerCertificate.Subject)"
+          }
+          Get-ChildItem Dados\motor -ErrorAction SilentlyContinue -Recurse -File | Where-Object { $_.Extension -in '.exe','.dll' } | ForEach-Object { "$($_.Name) $((Get-AuthenticodeSignature $_.FullName).Status)" }
+
   build:
     runs-on: windows-2022
     steps:
@@ -33,7 +62,7 @@ jobs:
       - name: Upload WPF visual checks
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: ilha-visual-previews
+          name: tito-visual-previews
           path: |
             Dados/preview-*.png
             Dados/preview-notes.txt
@@ -46,8 +75,8 @@ jobs:
         id: unsigned
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: ilha-windows-unsigned
-          path: dist/Ilha-Windows-unsigned.zip
+          name: tito-windows-unsigned
+          path: dist/Tito-Windows-unsigned.zip
           if-no-files-found: error
       - name: Check signing configuration
         if: github.event_name == 'workflow_dispatch' && inputs.sign
@@ -82,11 +111,11 @@ jobs:
           $archive = Get-ChildItem signed -Filter '*.zip' -Recurse
           if (@($archive).Count -ne 1) { throw 'Expected exactly one signed distribution ZIP.' }
           .\scripts\Verify-SignedPackage.ps1 -Archive $archive.FullName
-          Copy-Item -LiteralPath $archive.FullName -Destination dist/Ilha-Windows.zip
+          Copy-Item -LiteralPath $archive.FullName -Destination dist/Tito-Windows.zip
       - name: Upload verified signed artifact
         if: github.event_name == 'workflow_dispatch' && inputs.sign && startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: ilha-windows-signed
-          path: dist/Ilha-Windows.zip
+          name: tito-windows-signed
+          path: dist/Tito-Windows.zip
           if-no-files-found: error

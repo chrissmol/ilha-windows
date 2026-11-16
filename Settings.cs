@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-namespace Ilha {
+namespace Tito {
 public partial class App {
  // Settings: grouped cards with switches and link rows.
  static Border CardBox(UIElement child){return new Border{Background=B("#16FFFFFF"),CornerRadius=new CornerRadius(14),Padding=new Thickness(4),Margin=new Thickness(0,0,0,6),Child=child};}
@@ -37,10 +37,10 @@ public partial class App {
   var links=Stack();links.Children.Add(LinkRow("Prateleira",()=>Switch("shelf")));links.Children.Add(LinkRow("Áudio",()=>Switch("audio")));links.Children.Add(LinkRow("Conectar Claude",()=>Switch("agent")));left.Children.Add(CardBox(links));left.Children.Add(MonitorsCard());
   var right=Stack();right.Margin=new Thickness(5,0,0,0);Grid.SetColumn(right,1);
   var robo=Stack();var title=T("Robo · IA local",12,"#E3D9E8");title.Margin=new Thickness(8,4,0,4);robo.Children.Add(title);
-  models=new ComboBox{Height=28,Margin=new Thickness(4,0,4,6)};if(!String.IsNullOrEmpty(localModel)){models.Items.Add(localModel);models.SelectedIndex=0;}
-  models.SelectionChanged+=(s,e)=>{if(models.SelectedItem!=null){localModel=models.SelectedItem.ToString();File.WriteAllText(System.IO.Path.Combine(dataDir,"model.txt"),localModel);}};robo.Children.Add(models);
-  robo.Children.Add(PillButton("Detectar modelos",DetectModels));
-  modelStatus=T("Requer Ollama em execução neste PC.",10.5,"#B9ADB9");modelStatus.TextWrapping=TextWrapping.Wrap;modelStatus.Margin=new Thickness(8,7,8,4);robo.Children.Add(modelStatus);right.Children.Add(CardBox(robo));
+  models=new ComboBox{Height=28,Margin=new Thickness(4,0,4,6)};int sel=0;foreach(var m in motorModels){models.Items.Add(new ComboBoxItem{Content="Tito · "+m.Name+" · "+GB(m.Size),Tag="tito:"+m.Id});if(!IsOllama()&&MotorChoice()==m)sel=models.Items.Count-1;}models.SelectedIndex=sel;
+  models.SelectionChanged+=(s,e)=>{var it=models.SelectedItem as ComboBoxItem;if(it!=null){localModel=(string)it.Tag;File.WriteAllText(System.IO.Path.Combine(dataDir,"model.txt"),localModel);if(modelStatus!=null)modelStatus.Text=MotorStatusText();}};robo.Children.Add(models);
+  robo.Children.Add(PillButton("Preparar IA agora",PrepareMotor));
+  modelStatus=T(MotorStatusText(),10.5,"#B9ADB9");modelStatus.TextWrapping=TextWrapping.Wrap;modelStatus.Margin=new Thickness(8,7,8,4);robo.Children.Add(modelStatus);DetectModels();right.Children.Add(CardBox(robo));
   var media_=Stack();var status=T("Mídia · "+(media.available?"conectada ao Windows":String.IsNullOrEmpty(media.error)?"aguardando player":media.error.Trim()),10.5,"#B9ADB9");status.TextWrapping=TextWrapping.Wrap;status.Margin=new Thickness(8,5,8,3);media_.Children.Add(status);
   media_.Children.Add(LinkRow("Voltar ao player Windows",()=>{useSystem=true;player.Pause();playing=false;Switch("music");}));right.Children.Add(CardBox(media_));
   grid.Children.Add(left);grid.Children.Add(right);
