@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 namespace Ilha {
 // Embedded local AI: Robo downloads llama.cpp (llama-server, CPU) and a small GGUF model into Dados/ on first use,
 // verifies SHA-256, and talks to it on 127.0.0.1 only. Nothing is committed to the repo; nothing leaves the PC except the two downloads.

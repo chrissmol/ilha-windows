@@ -40,11 +40,11 @@ jobs:
         if: always()
         shell: powershell
         run: |
-          Get-ChildItem Dados\motor -Recurse -Filter 'llama-server.exe' | ForEach-Object {
+          Get-ChildItem Dados\motor -ErrorAction SilentlyContinue -Recurse -Filter 'llama-server.exe' | ForEach-Object {
             $s = Get-AuthenticodeSignature $_.FullName
             "$($_.FullName): $($s.Status) $($s.SignerCertificate.Subject)"
           }
-          Get-ChildItem Dados\motor -Recurse -File | Where-Object { $_.Extension -in '.exe','.dll' } | ForEach-Object { "$($_.Name) $((Get-AuthenticodeSignature $_.FullName).Status)" }
+          Get-ChildItem Dados\motor -ErrorAction SilentlyContinue -Recurse -File | Where-Object { $_.Extension -in '.exe','.dll' } | ForEach-Object { "$($_.Name) $((Get-AuthenticodeSignature $_.FullName).Status)" }
 
   build:
     runs-on: windows-2022
