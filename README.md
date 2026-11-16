@@ -32,7 +32,7 @@ Extract the entire distribution ZIP into a normal folder, then open **Tito.exe**
 
 The + menu provides local music, synced lyrics, focus and new-chat actions. The capsule appears at the top of the primary screen. Hover to expand; move away to collapse. Use the tray icon to restart/update or shut down. A pinned shortcut to `Tito.exe` can stay on the taskbar while the floating window remains outside Alt+Tab.
 
-Unsigned downloads can be blocked by Smart App Control. Trusted signing is pending; see the [Code signing policy](CODE_SIGNING_POLICY.md).
+Uso local e pessoal: dê duplo clique em **Rodar.cmd**. Ele compila o Tito neste PC (com o compilador da Microsoft já instalado no Windows) e abre o app; se não abrir, mostra um diagnóstico (Smart App Control, modo do PowerShell, bloqueios). Binários sem assinatura podem ser bloqueados pelo Smart App Control mesmo compilados localmente; veja `scripts\Diagnostico.ps1`.
 
 ## Build
 

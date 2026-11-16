@@ -34,17 +34,17 @@ public partial class App {
  static void Animate(DependencyObject target,DependencyProperty prop,double value){var a=new DoubleAnimation(value,TimeSpan.FromMilliseconds(360)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}}; ((IAnimatable)target).BeginAnimation(prop,a);}
  static void Expand(bool yes){SetPose(yes,true);}
 
- static void Switch(string p){if(page=="robo"&&chatInput!=null)chatDraft=chatInput.Text;page=p;Render();if(!opened)Expand(true);}
+ static void Switch(string p){if(On("chat")&&chatInput!=null)chatDraft=chatInput.Text;if(p=="ia"&&page!="ia")iaTab="geral";if(p=="agent"||p=="robo"||p=="painel"){iaTab=p=="agent"?"geral":p=="robo"?"chat":"uso";p="ia";}page=p;Render();if(!opened)Expand(true);}
  static void Render(){
   var ghost=Ghost();ConfigureArtwork();
   view.Children.Clear();nav.Children.Clear();
-  if(page=="focus")Focus();else if(page=="music")SystemMusic();else if(page=="agent")LiveAgent();else if(page=="robo"){Robo();if(chatInput!=null)chatInput.Text=chatDraft;}else if(page=="shelf")Shelf();else if(page=="audio")AudioPanel();else if(page=="settings")Settings();else if(page=="notes")Notes();else if(page=="clipboard")ClipboardPage();else if(page=="agenda")Agenda();else if(page=="painel")PainelPage();else Dashboard();
-  var links=new[]{new[]{"home","home","HOME"},new[]{"music","music","MÍDIA"},new[]{"focus","focus","FOCUS"},new[]{"agent","agent","CLAUDE"},new[]{"robo","robo","ROBO"},new[]{"agenda","agenda","AGENDA"},new[]{"notes","notes","NOTAS"},new[]{"clipboard","clipboard","COLAR"},new[]{"painel","painel","PAINEL"}};
+  if(page=="focus")Focus();else if(page=="music")SystemMusic();else if(page=="ia")IAPage();else if(page=="shelf")Shelf();else if(page=="audio")AudioPanel();else if(page=="settings")Settings();else if(page=="notes")Notes();else if(page=="clipboard")ClipboardPage();else if(page=="agenda")Agenda();else Dashboard();
+  var links=new[]{new[]{"home","home","HOME"},new[]{"music","music","MÍDIA"},new[]{"focus","focus","FOCUS"},new[]{"ia","ia","IA"},new[]{"agenda","agenda","AGENDA"},new[]{"notes","notes","NOTAS"},new[]{"clipboard","clipboard","COLAR"}};
   foreach(var link in links){string target=link[1];var b=Btn("",()=>{if(target=="music"){useSystem=true;player.Pause();playing=false;}Switch(target);},link[2]);b.Content=NavIcon(link[0],page==target?link[2]:null);if(page==target){b.Background=B("#22FFFFFF");b.Foreground=B("#FFFFFF");activeNav=b;}nav.Children.Add(b);}
 
   PageIn(ghost);
  }
- static string shownPage="";static readonly string[] pageOrder={"home","music","focus","agent","robo","agenda","notes","clipboard","painel","shelf","audio","settings"};
+ static string shownPage="";static readonly string[] pageOrder={"home","music","focus","ia","agenda","notes","clipboard","shelf","audio","settings"};
  static Image lastGhost;
  static Image Ghost(){
   if(page==shownPage||shownPage==""||!SystemParameters.ClientAreaAnimation||!w.IsVisible||view.ActualWidth<2||view.ActualHeight<2)return null;
@@ -117,12 +117,12 @@ public partial class App {
  static void Log(string text){try{File.AppendAllText(System.IO.Path.Combine(dataDir,"lifecycle.log"),text);}catch{}}
  public static void Run(){
   var application=new System.Windows.Application{ShutdownMode=ShutdownMode.OnExplicitShutdown};
-  Log("Build start\n");Build();Log("Build done\n");if(!secondary)StartMediaBridge();SetupPresence();SetupMonitors();if(!secondary&&!uiTest)SyncIslands();Log("Bridge started\n");player.MediaEnded+=(s,e)=>{playing=false;if(tracks.Length>1)Next(1);else if(play!=null)play.Content="▶";};player.MediaFailed+=(s,e)=>{playing=false;error="Não foi possível reproduzir este arquivo. "+e.ErrorException.Message;ShowError();};
+  Log("Build start\n");Build();Log("Build done\n");if(!secondary)StartMediaBridge();SetupPresence();SetupMonitors();if(!secondary&&!uiTest){AutostartInit();SyncIslands();}Log("Bridge started\n");player.MediaEnded+=(s,e)=>{playing=false;if(tracks.Length>1)Next(1);else if(play!=null)play.Content="▶";};player.MediaFailed+=(s,e)=>{playing=false;error="Não foi possível reproduzir este arquivo. "+e.ErrorException.Message;ShowError();};
   ticker=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(250)};ticker.Tick+=(s,e)=>{if(!uiTest)PresenceTick();Tick();PollIntegrations();ExperienceTick();};ticker.Start();hoverTimer=new DispatcherTimer(DispatcherPriority.Input){Interval=TimeSpan.FromMilliseconds(33)};hoverTimer.Tick+=(s,e)=>HoverTick();hoverTimer.Start();
   if(!secondary){tray=new Forms.NotifyIcon{Icon=new System.Drawing.Icon(System.IO.Path.Combine(baseDir,"Tito.ico")),Text="Tito · Robo",Visible=true};tray.MouseClick+=(s,e)=>{if(e.Button==Forms.MouseButtons.Left&&!contextHidden){Expand(true);w.Activate();}};
   var menu=new Forms.ContextMenuStrip();menu.Items.Add("Abrir Tito",null,(s,e)=>{if(!contextHidden)Expand(true);});menu.Items.Add("Reiniciar / atualizar",null,(s,e)=>Restart());
   var quiet=new Forms.ToolStripMenuItem("Ocultar em jogos / tela cheia"){Checked=true,CheckOnClick=true};quiet.CheckedChanged+=(s,e)=>{autoHideContext=quiet.Checked;PresenceTick();};menu.Items.Add(quiet);
-  var hideApp=new Forms.ToolStripMenuItem("Ocultar neste aplicativo");menu.Opening+=(s,e)=>hideApp.Text="Ocultar em "+(String.IsNullOrEmpty(DesktopContext.ForegroundApp)?"aplicativo atual":DesktopContext.ForegroundApp);hideApp.Click+=(s,e)=>HideCurrentApp();menu.Items.Add(hideApp);menu.Items.Add(MonitorsMenu());menu.Items.Add("Prateleira",null,(s,e)=>{Switch("shelf");Expand(true);});menu.Items.Add("Áudio",null,(s,e)=>{Switch("audio");Expand(true);});var dnd=new Forms.ToolStripMenuItem("Não incomodar"){CheckOnClick=true,Checked=doNotDisturb};dnd.CheckedChanged+=(s,e)=>doNotDisturb=dnd.Checked;menu.Items.Add(dnd);menu.Items.Add("Desligar Tito",null,(s,e)=>w.Close());tray.ContextMenuStrip=menu;}
+  var hideApp=new Forms.ToolStripMenuItem("Ocultar neste aplicativo");menu.Opening+=(s,e)=>hideApp.Text="Ocultar em "+(String.IsNullOrEmpty(DesktopContext.ForegroundApp)?"aplicativo atual":DesktopContext.ForegroundApp);hideApp.Click+=(s,e)=>HideCurrentApp();menu.Items.Add(hideApp);menu.Items.Add(MonitorsMenu());menu.Items.Add("Prateleira",null,(s,e)=>{Switch("shelf");Expand(true);});menu.Items.Add("Áudio",null,(s,e)=>{Switch("audio");Expand(true);});var dnd=new Forms.ToolStripMenuItem("Não incomodar"){CheckOnClick=true,Checked=doNotDisturb};dnd.CheckedChanged+=(s,e)=>doNotDisturb=dnd.Checked;menu.Items.Add(dnd);var boot=new Forms.ToolStripMenuItem("Iniciar com o Windows"){CheckOnClick=true,Checked=AutostartOn()};boot.Click+=(s,e)=>SetAutostart(boot.Checked);menu.Opening+=(s,e)=>boot.Checked=AutostartOn();menu.Items.Add(boot);menu.Items.Add("Desligar Tito",null,(s,e)=>w.Close());tray.ContextMenuStrip=menu;}
   w.Closed+=(s,e)=>{MotorStop();ticker.Stop();hoverTimer.Stop();leaveTimer.Stop();player.Close();if(tray!=null)tray.Dispose();if(openSignal!=null)openSignal.Dispose();if(restartSignal!=null)restartSignal.Dispose();if(mediaWorker!=null&&!mediaWorker.HasExited)try{mediaWorker.Kill();}catch{}application.Shutdown();};Log("Show start\n");w.Loaded+=(s,e)=>{if(labMode>0){RunLab();}else if(uiTest){RunLifecycleChecks();}else SetPose(false,false);};w.Show();application.Run();
  }
 }
