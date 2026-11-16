@@ -84,7 +84,7 @@ public partial class App {
  }
  static void Capture(string name){
   glass.BeginAnimation(UIElement.OpacityProperty,null);glass.Opacity=1;
-  view.BeginAnimation(UIElement.OpacityProperty,null);view.Opacity=1;
+  view.BeginAnimation(UIElement.OpacityProperty,null);view.Opacity=1;view.RenderTransform=null;
   glass.Width=600;glass.Height=270;glass.Measure(new Size(600,270));glass.Arrange(new Rect(0,0,600,270));glass.UpdateLayout();
   var bmp=new RenderTargetBitmap(600,270,96,96,PixelFormats.Pbgra32);bmp.Render(glass);var matte=new DrawingVisual();using(var dc=matte.RenderOpen()){dc.DrawRoundedRectangle(B("#101014"),null,new Rect(0,0,600,270),24,24);dc.DrawImage(bmp,new Rect(0,0,600,270));}var composited=new RenderTargetBitmap(600,270,96,96,PixelFormats.Pbgra32);composited.Render(matte);SavePng(composited,"preview-"+name+".png");
  }

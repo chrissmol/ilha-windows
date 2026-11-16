@@ -83,13 +83,15 @@ public partial class App {
   if(animated){
    glass.Visibility=Visibility.Visible;restingShell.Visibility=Visibility.Visible;
    MorphTo(width,height,expanded);
-   var panelFade=new System.Windows.Media.Animation.DoubleAnimation(expanded?1:0,TimeSpan.FromMilliseconds(expanded?260:140)){BeginTime=expanded?TimeSpan.FromMilliseconds(90):TimeSpan.Zero};
+   var scale=new ScaleTransform(expanded?.94:1,expanded?.94:1);glass.RenderTransformOrigin=new Point(.5,0);glass.RenderTransform=scale;
+   if(expanded){var grow=new System.Windows.Media.Animation.DoubleAnimation(1,TimeSpan.FromMilliseconds(460)){BeginTime=TimeSpan.FromMilliseconds(60),EasingFunction=new System.Windows.Media.Animation.CubicEase{EasingMode=System.Windows.Media.Animation.EasingMode.EaseOut}};scale.BeginAnimation(ScaleTransform.ScaleXProperty,grow);scale.BeginAnimation(ScaleTransform.ScaleYProperty,grow);}
+   var panelFade=new System.Windows.Media.Animation.DoubleAnimation(expanded?1:0,TimeSpan.FromMilliseconds(expanded?240:90)){BeginTime=expanded?TimeSpan.FromMilliseconds(110):TimeSpan.Zero};
    panelFade.Completed+=(s,e)=>{if(revision==poseRevision&&!expanded)glass.Visibility=Visibility.Collapsed;};glass.BeginAnimation(UIElement.OpacityProperty,panelFade);
    var faceFade=new System.Windows.Media.Animation.DoubleAnimation(expanded?0:1,TimeSpan.FromMilliseconds(180));
    faceFade.Completed+=(s,e)=>{if(revision==poseRevision&&expanded)restingShell.Visibility=Visibility.Collapsed;};restingShell.BeginAnimation(UIElement.OpacityProperty,faceFade);
   }else{
    islandClip.BeginAnimation(RectangleGeometry.RectProperty,null);islandClip.BeginAnimation(RectangleGeometry.RadiusXProperty,null);islandClip.BeginAnimation(RectangleGeometry.RadiusYProperty,null);SetClip(width,height);
-   glass.BeginAnimation(UIElement.OpacityProperty,null);restingShell.BeginAnimation(UIElement.OpacityProperty,null);glass.Opacity=expanded?1:0;restingShell.Opacity=expanded?0:1;
+   glass.RenderTransform=null;glass.BeginAnimation(UIElement.OpacityProperty,null);restingShell.BeginAnimation(UIElement.OpacityProperty,null);glass.Opacity=expanded?1:0;restingShell.Opacity=expanded?0:1;
    glass.Visibility=expanded?Visibility.Visible:Visibility.Collapsed;restingShell.Visibility=expanded?Visibility.Collapsed:Visibility.Visible;
   }
  }

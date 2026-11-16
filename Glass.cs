@@ -42,7 +42,13 @@ public partial class App {
   var links=new[]{new[]{"home","home","HOME"},new[]{"music","music","MÍDIA"},new[]{"focus","focus","FOCUS"},new[]{"agent","agent","CLAUDE"},new[]{"robo","robo","ROBO"},new[]{"agenda","agenda","AGENDA"},new[]{"notes","notes","NOTAS"},new[]{"clipboard","clipboard","COLAR"}};
   foreach(var link in links){string target=link[1];var b=Btn("",()=>{if(target=="music"){useSystem=true;player.Pause();playing=false;}Switch(target);},link[2]);b.Content=NavIcon(link[0],page==target?link[2]:null);if(page==target){b.Background=B("#22FFFFFF");b.Foreground=B("#FFFFFF");}nav.Children.Add(b);}
 
-  view.Opacity=0;Animate(view,UIElement.OpacityProperty,1);
+  PageIn();
+ }
+ static string shownPage="";static readonly string[] pageOrder={"home","music","focus","agent","robo","agenda","notes","clipboard","shelf","audio","settings"};
+ static void PageIn(){
+  if(page==shownPage)return;int dir=Array.IndexOf(pageOrder,page)>=Array.IndexOf(pageOrder,shownPage)?1:-1;shownPage=page;if(!SystemParameters.ClientAreaAnimation)return;
+  var slide=new TranslateTransform(24*dir,0);view.RenderTransform=slide;var ease=new CubicEase{EasingMode=EasingMode.EaseOut};
+  slide.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(0,TimeSpan.FromMilliseconds(340)){EasingFunction=ease});view.Opacity=0;view.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(260)){EasingFunction=ease});
  }
  static void Focus(){
   var grid=new Grid();view.Children.Add(grid);
