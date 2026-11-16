@@ -1,12 +1,12 @@
-# Ilha lab: drives the real app through every transition without needing the screen.
+# Tito lab: drives the real app through every transition without needing the screen.
 # Pass 1 (--lab) measures render-frame timing; pass 2 (--lab-frames) saves PNG frames per transition.
 # Output: Dados\lab\report.txt and Dados\lab\sheet-*.png (contact sheets, one per transition).
 $ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
-$env:ILHA_ROOT=$root
+$env:TITO_ROOT=$root
 $runtime=Join-Path $root ([IO.File]::ReadAllText((Join-Path $root 'current-version.txt')).Trim())
 $lab=Join-Path $root 'Dados\lab'
-Get-Process IlhaGlass -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process TitoGlass -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep 1
 foreach($mode in '--lab','--lab-frames'){
   $p=Start-Process -FilePath $runtime -ArgumentList $mode -PassThru

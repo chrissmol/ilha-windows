@@ -10,7 +10,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
-namespace Ilha {
+namespace Tito {
 public partial class App {
  static TextBlock dashTrack,dashArtist,dashTimer,dashReady,dashAgent,dashCount;
  static Image dashImage;static string dashCover="";

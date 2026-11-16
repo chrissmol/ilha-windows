@@ -1,6 +1,6 @@
 ﻿$ErrorActionPreference='Stop'
 $root=Split-Path $PSScriptRoot -Parent
-$env:ILHA_ROOT=$root
+$env:TITO_ROOT=$root
 $runtime=Join-Path $root ([IO.File]::ReadAllText((Join-Path $root 'current-version.txt')).Trim())
 $result=Join-Path $root 'Dados\ui-test.txt'
 $before=[DateTime]::UtcNow

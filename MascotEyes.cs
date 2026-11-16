@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-namespace Ilha {
+namespace Tito {
 // Tito: two eyes that change shape, color and movement with what the app is doing.
 // Continuous animations only run for moods that need them (stepped, a few redraws per second).
 public sealed class MascotEyes : FrameworkElement {

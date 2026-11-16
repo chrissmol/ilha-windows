@@ -1,4 +1,4 @@
-# Ilha for Windows
+# Tito for Windows
 
 A Windows desktop companion that rests as a small black capsule with two eyes and expands into a translucent dashboard on hover.
 
@@ -28,9 +28,9 @@ Still requiring completion or broader verification: fidelity across all referenc
 
 Requires Windows with .NET Framework 4.8. Native desktop acrylic requires Windows 11 build 22621 or later; other systems use an opaque fallback.
 
-Extract the entire distribution ZIP into a normal folder, then open **Ilha.exe**. Running `Iniciar.cmd` from inside the ZIP does not extract its dependencies.
+Extract the entire distribution ZIP into a normal folder, then open **Tito.exe**. Running `Iniciar.cmd` from inside the ZIP does not extract its dependencies.
 
-The + menu provides local music, synced lyrics, focus and new-chat actions. The capsule appears at the top of the primary screen. Hover to expand; move away to collapse. Use the tray icon to restart/update or shut down. A pinned shortcut to `Ilha.exe` can stay on the taskbar while the floating window remains outside Alt+Tab.
+The + menu provides local music, synced lyrics, focus and new-chat actions. The capsule appears at the top of the primary screen. Hover to expand; move away to collapse. Use the tray icon to restart/update or shut down. A pinned shortcut to `Tito.exe` can stay on the taskbar while the floating window remains outside Alt+Tab.
 
 Unsigned downloads can be blocked by Smart App Control. Trusted signing is pending; see the [Code signing policy](CODE_SIGNING_POLICY.md).
 
@@ -44,7 +44,7 @@ powershell.exe -NoProfile -File .\scripts\Test.ps1
 powershell.exe -NoProfile -File .\scripts\Package.ps1 -SkipBuild
 ```
 
-Builds are stored under `Versions/`. `Ilha.exe` is a stable launcher that reads `current-version.txt`, enabling version replacement without overwriting a running runtime executable.
+Builds are stored under `Versions/`. `Tito.exe` is a stable launcher that reads `current-version.txt`, enabling version replacement without overwriting a running runtime executable.
 
 ## Connections
 
@@ -68,7 +68,7 @@ See [CODE_SIGNING_POLICY.md](CODE_SIGNING_POLICY.md). The SignPath Foundation ap
 
 ## Visual checks
 
-The GitHub workflow uploads an `ilha-visual-previews` artifact containing offscreen WPF renders. Files named `preview-reference-*` use explicit synthetic playback/chat fixtures for visual review; they are not live service results. Native desktop acrylic is composited by Windows and is not included in these offscreen images.
+The GitHub workflow uploads an `tito-visual-previews` artifact containing offscreen WPF renders. Files named `preview-reference-*` use explicit synthetic playback/chat fixtures for visual review; they are not live service results. Native desktop acrylic is composited by Windows and is not included in these offscreen images.
 
 ### Experiência ampliada
 
@@ -82,4 +82,4 @@ The GitHub workflow uploads an `ilha-visual-previews` artifact containing offscr
 
 ### Ondas de áudio reais
 
-Na aba Mídia, os olhos se transformam em sete barras que mostram o histórico recente de picos da saída padrão (Core Audio / IAudioMeterInformation). Não é um espectro de frequências. A leitura ocorre a cada 50 ms em uma thread separada, e a saída padrão é verificada a cada segundo para acompanhar trocas de dispositivo. A leitura pausa quando a Ilha está oculta ou não apresenta mídia. Nenhum microfone é aberto; não há captura, gravação ou transmissão de áudio. O medidor do Windows é anterior à atenuação do volume do dispositivo, portanto pode continuar indicando sinal mesmo com volume reduzido ou mudo. As barras representam a mistura da saída padrão, e não exclusivamente o aplicativo escolhido no seletor de mídia. Em indisponibilidade, ficam em repouso com explicação no tooltip. Movimento reduzido mantém o indicador estático. No navegador, a animação é demonstrativa e não mede o som do PC.
+Na aba Mídia, os olhos se transformam em sete barras que mostram o histórico recente de picos da saída padrão (Core Audio / IAudioMeterInformation). Não é um espectro de frequências. A leitura ocorre a cada 50 ms em uma thread separada, e a saída padrão é verificada a cada segundo para acompanhar trocas de dispositivo. A leitura pausa quando a Tito está oculta ou não apresenta mídia. Nenhum microfone é aberto; não há captura, gravação ou transmissão de áudio. O medidor do Windows é anterior à atenuação do volume do dispositivo, portanto pode continuar indicando sinal mesmo com volume reduzido ou mudo. As barras representam a mistura da saída padrão, e não exclusivamente o aplicativo escolhido no seletor de mídia. Em indisponibilidade, ficam em repouso com explicação no tooltip. Movimento reduzido mantém o indicador estático. No navegador, a animação é demonstrativa e não mede o som do PC.
