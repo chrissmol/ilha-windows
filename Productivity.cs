@@ -12,7 +12,9 @@ public partial class App {
  static readonly List<string> clipItems=new List<string>();static string lastClip="";static TextBox notesBox;
  static string NotesPath(){return Path.Combine(dataDir,"notes.txt");}
  static string AgendaPath(){return Path.Combine(dataDir,"agenda.txt");}
+ [System.Runtime.InteropServices.DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();static uint clipSeq;
  static void ClipboardTick(){
+  uint seq=GetClipboardSequenceNumber();if(seq==clipSeq)return;clipSeq=seq;
   try{
    if(!Clipboard.ContainsText()||Clipboard.ContainsData("ExcludeClipboardContentFromMonitorProcessing"))return;
    string text=Clipboard.GetText();if(String.IsNullOrWhiteSpace(text)||text==lastClip||text.Length>2000)return;

@@ -32,15 +32,10 @@ public static class DesktopContext {
  static uint cachedPid;static string cachedName="",cachedPath="";
  public static string ForegroundApp="";
  public static void HideFromSwitcher(Window window){var hwnd=new WindowInteropHelper(window).Handle;int style=GetWindowLong(hwnd,-20);SetWindowLong(hwnd,-20,(style|0x80)&~0x40000);}
- [DllImport("user32.dll")] static extern bool SetWindowDisplayAffinity(IntPtr hwnd,uint affinity);
- [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr handle);
- public static System.Windows.Media.Imaging.BitmapSource CaptureBehind(Window window,double dipWidth,double dipHeight,double dipTop){
-  var hwnd=new WindowInteropHelper(window).Handle;Rect rect;if(hwnd==IntPtr.Zero||!GetWindowRect(hwnd,out rect))return null;
-  var source=PresentationSource.FromVisual(window);double scale=source==null?1:source.CompositionTarget.TransformToDevice.M11;
-  int pw=(int)(dipWidth*scale),ph=(int)(dipHeight*scale),x=(int)((rect.Left+rect.Right)/2.0-pw/2.0),y=(int)(rect.Top+dipTop*scale);
-  SetWindowDisplayAffinity(hwnd,0x11);
-  try{using(var bmp=new System.Drawing.Bitmap(pw,ph)){using(var g=System.Drawing.Graphics.FromImage(bmp))g.CopyFromScreen(x,y,0,0,bmp.Size);IntPtr h=bmp.GetHbitmap();try{var image=System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(h,IntPtr.Zero,Int32Rect.Empty,System.Windows.Media.Imaging.BitmapSizeOptions.FromWidthAndHeight(Math.Max(1,pw/10),Math.Max(1,ph/10)));image.Freeze();return image;}finally{DeleteObject(h);}}}
-  finally{SetWindowDisplayAffinity(hwnd,0);}
+ public static bool CursorInside(Window window,double dipWidth,double dipHeight,double margin){
+  CursorPoint p;Rect r;var hwnd=new WindowInteropHelper(window).Handle;if(hwnd==IntPtr.Zero||!GetCursorPos(out p)||!GetWindowRect(hwnd,out r))return false;
+  double s=(r.Right-r.Left)/640.0,cx=(r.Left+r.Right)/2.0;
+  return p.X>=cx-(dipWidth/2+margin)*s&&p.X<=cx+(dipWidth/2+margin)*s&&p.Y>=r.Top+(8-margin)*s&&p.Y<=r.Top+(8+dipHeight+margin)*s;
  }
  public static bool IsToolWindow(IntPtr hwnd){int style=GetWindowLong(hwnd,-20);return (style&0x80)!=0&&(style&0x40000)==0;}
  public static bool CoversMonitor(Rect rect,Rect monitor){return rect.Left<=monitor.Left+2&&rect.Top<=monitor.Top+2&&rect.Right>=monitor.Right-2&&rect.Bottom>=monitor.Bottom-2;}
@@ -70,8 +65,8 @@ public static class DesktopContext {
  }
 }
 public partial class App {
- static Border restingShell;static MascotEyes mascot;static Grid windowHost,island;static Image backdropImage;
- static void CaptureBackdrop(){try{if(!w.IsVisible)return;var s=DesktopContext.CaptureBehind(w,600,270,8);if(s!=null)backdropImage.Source=s;}catch{}}
+ static Border restingShell;static MascotEyes mascot;static Grid windowHost,island;
+ static RectangleGeometry islandClip;static DispatcherTimer hoverTimer;
  static bool secondary;static int ownerPid;static Process ownerProc;static string suffix="";
  static bool contextHidden,autoHideContext=true;
  static HashSet<string> hiddenApps=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -83,16 +78,17 @@ public partial class App {
   if(expanded){view.Visibility=Visibility.Visible;nav.Visibility=Visibility.Visible;date.Visibility=Visibility.Visible;time.Visibility=Visibility.Visible;compact.Visibility=Visibility.Collapsed;}
   double width=expanded?600:compactWide?compactWidth:128,height=expanded?270:34;
   var area=MonitorArea();w.Left=area.Left+(area.Width-640)/2;w.Top=area.Top;
+  if(!expanded){restingShell.Width=width;restingShell.Height=height;}
   glass.IsHitTestVisible=expanded;restingShell.IsHitTestVisible=!expanded;
   if(animated){
    glass.Visibility=Visibility.Visible;restingShell.Visibility=Visibility.Visible;
-   Spring(FrameworkElement.WidthProperty,width,expanded);Spring(FrameworkElement.HeightProperty,height,expanded);
+   MorphTo(width,height,expanded);
    var panelFade=new System.Windows.Media.Animation.DoubleAnimation(expanded?1:0,TimeSpan.FromMilliseconds(expanded?260:140)){BeginTime=expanded?TimeSpan.FromMilliseconds(90):TimeSpan.Zero};
    panelFade.Completed+=(s,e)=>{if(revision==poseRevision&&!expanded)glass.Visibility=Visibility.Collapsed;};glass.BeginAnimation(UIElement.OpacityProperty,panelFade);
    var faceFade=new System.Windows.Media.Animation.DoubleAnimation(expanded?0:1,TimeSpan.FromMilliseconds(180));
    faceFade.Completed+=(s,e)=>{if(revision==poseRevision&&expanded)restingShell.Visibility=Visibility.Collapsed;};restingShell.BeginAnimation(UIElement.OpacityProperty,faceFade);
   }else{
-   island.BeginAnimation(FrameworkElement.WidthProperty,null);island.BeginAnimation(FrameworkElement.HeightProperty,null);island.Width=width;island.Height=height;
+   islandClip.BeginAnimation(RectangleGeometry.RectProperty,null);islandClip.BeginAnimation(RectangleGeometry.RadiusXProperty,null);islandClip.BeginAnimation(RectangleGeometry.RadiusYProperty,null);SetClip(width,height);
    glass.BeginAnimation(UIElement.OpacityProperty,null);restingShell.BeginAnimation(UIElement.OpacityProperty,null);glass.Opacity=expanded?1:0;restingShell.Opacity=expanded?0:1;
    glass.Visibility=expanded?Visibility.Visible:Visibility.Collapsed;restingShell.Visibility=expanded?Visibility.Collapsed:Visibility.Visible;
   }
@@ -105,6 +101,11 @@ public partial class App {
  }
  static void SpawnOtherIslands(){var screens=System.Windows.Forms.Screen.AllScreens;string exe=Process.GetCurrentProcess().MainModule.FileName;for(int i=0;i<screens.Length;i++)if(i!=selectedMonitor)try{Process.Start(new ProcessStartInfo(exe,"--monitor "+i+" --owner "+Process.GetCurrentProcess().Id){UseShellExecute=false,CreateNoWindow=true,WorkingDirectory=baseDir});}catch{}}
 
+ static void HoverTick(){
+  if(uiTest||contextHidden||!w.IsVisible)return;
+  double tw=opened?600:(compactWide?compactWidth:128),th=opened?270:34;bool inside=DesktopContext.CursorInside(w,tw,th,opened?2:0);
+  if(opened){if(!inside&&System.Windows.Input.Mouse.Captured==null&&!dropHover)Expand(false);}else if(inside&&!doNotDisturb)Expand(true);
+ }
  static void PresenceTick(){
   if(secondary&&ownerProc!=null&&ownerProc.HasExited){w.Close();return;}
   if(restartSignal!=null&&restartSignal.WaitOne(0)){w.Close();return;}

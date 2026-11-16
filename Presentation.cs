@@ -93,7 +93,7 @@ public partial class App {
  static void CaptureMorphFrame(int index){
   var visual=new DrawingVisual();using(var dc=visual.RenderOpen()){
    dc.DrawRectangle(B("#20252E"),null,new Rect(0,0,640,302));
-   if(w.IsVisible){double width=Math.Max(1,island.ActualWidth),height=Math.Max(1,island.ActualHeight);var rect=new Rect((640-width)/2,12,width,height);dc.DrawRoundedRectangle(B("#101014"),null,rect,Math.Min(24,height/2),Math.Min(24,height/2));dc.DrawRectangle(new VisualBrush(island){Stretch=Stretch.Fill},null,rect);}
+   if(w.IsVisible){double width=Math.Max(1,islandClip.Rect.Width),height=Math.Max(1,islandClip.Rect.Height);var rect=new Rect((640-width)/2,12,width,height);dc.DrawRoundedRectangle(B("#101014"),null,rect,Math.Min(24,height/2),Math.Min(24,height/2));dc.DrawRectangle(new VisualBrush(island){ViewboxUnits=BrushMappingMode.Absolute,Viewbox=islandClip.Rect,Stretch=Stretch.Fill},null,rect);}
   }
   var bmp=new RenderTargetBitmap(640,302,96,96,PixelFormats.Pbgra32);bmp.Render(visual);bmp.Freeze();morphFrames.Add(bmp);
  }
