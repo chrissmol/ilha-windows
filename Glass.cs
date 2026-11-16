@@ -57,11 +57,11 @@ public partial class App {
   var parent=view.Parent as Grid;
   if(ghost!=null&&parent!=null){
    if(lastGhost!=null)parent.Children.Remove(lastGhost);Grid.SetRow(ghost,1);parent.Children.Add(ghost);lastGhost=ghost;var move=new TranslateTransform();ghost.RenderTransform=move;
-   move.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(-24*dir,TimeSpan.FromMilliseconds(240)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}});
-   var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(200));fade.Completed+=(s,e)=>{parent.Children.Remove(ghost);if(lastGhost==ghost)lastGhost=null;};ghost.BeginAnimation(UIElement.OpacityProperty,fade);
+   move.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(-24*dir,TimeSpan.FromMilliseconds(200)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}});
+   var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(130));fade.Completed+=(s,e)=>{parent.Children.Remove(ghost);if(lastGhost==ghost)lastGhost=null;};ghost.BeginAnimation(UIElement.OpacityProperty,fade);
   }
   var slide=new TranslateTransform(24*dir,0);view.RenderTransform=slide;var ease=new CubicEase{EasingMode=EasingMode.EaseOut};
-  slide.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(0,TimeSpan.FromMilliseconds(340)){EasingFunction=ease});view.Opacity=0;view.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(260)){EasingFunction=ease});
+  slide.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(0,TimeSpan.FromMilliseconds(340)){EasingFunction=ease});view.Opacity=0;view.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(260)){BeginTime=TimeSpan.FromMilliseconds(ghost!=null?90:0),EasingFunction=ease});
  }
  static void Focus(){
   var grid=new Grid();view.Children.Add(grid);
@@ -123,7 +123,7 @@ public partial class App {
   var menu=new Forms.ContextMenuStrip();menu.Items.Add("Abrir Ilha",null,(s,e)=>{if(!contextHidden)Expand(true);});menu.Items.Add("Reiniciar / atualizar",null,(s,e)=>Restart());
   var quiet=new Forms.ToolStripMenuItem("Ocultar em jogos / tela cheia"){Checked=true,CheckOnClick=true};quiet.CheckedChanged+=(s,e)=>{autoHideContext=quiet.Checked;PresenceTick();};menu.Items.Add(quiet);
   var hideApp=new Forms.ToolStripMenuItem("Ocultar neste aplicativo");menu.Opening+=(s,e)=>hideApp.Text="Ocultar em "+(String.IsNullOrEmpty(DesktopContext.ForegroundApp)?"aplicativo atual":DesktopContext.ForegroundApp);hideApp.Click+=(s,e)=>HideCurrentApp();menu.Items.Add(hideApp);menu.Items.Add("Prateleira",null,(s,e)=>{Switch("shelf");Expand(true);});menu.Items.Add("Áudio",null,(s,e)=>{Switch("audio");Expand(true);});var dnd=new Forms.ToolStripMenuItem("Não incomodar"){CheckOnClick=true,Checked=doNotDisturb};dnd.CheckedChanged+=(s,e)=>doNotDisturb=dnd.Checked;menu.Items.Add(dnd);menu.Items.Add("Desligar Ilha",null,(s,e)=>w.Close());tray.ContextMenuStrip=menu;}
-  w.Closed+=(s,e)=>{ticker.Stop();hoverTimer.Stop();leaveTimer.Stop();player.Close();if(tray!=null)tray.Dispose();if(openSignal!=null)openSignal.Dispose();if(restartSignal!=null)restartSignal.Dispose();if(mediaWorker!=null&&!mediaWorker.HasExited)try{mediaWorker.Kill();}catch{}application.Shutdown();};Log("Show start\n");w.Loaded+=(s,e)=>{if(uiTest){RunLifecycleChecks();}else SetPose(false,false);};w.Show();application.Run();
+  w.Closed+=(s,e)=>{ticker.Stop();hoverTimer.Stop();leaveTimer.Stop();player.Close();if(tray!=null)tray.Dispose();if(openSignal!=null)openSignal.Dispose();if(restartSignal!=null)restartSignal.Dispose();if(mediaWorker!=null&&!mediaWorker.HasExited)try{mediaWorker.Kill();}catch{}application.Shutdown();};Log("Show start\n");w.Loaded+=(s,e)=>{if(labMode>0){RunLab();}else if(uiTest){RunLifecycleChecks();}else SetPose(false,false);};w.Show();application.Run();
  }
 }
 }
