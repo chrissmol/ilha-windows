@@ -30,7 +30,7 @@ public partial class App {
   if(confettiLayer==null||!SystemParameters.ClientAreaAnimation)return;var random=new Random();
   for(int i=0;i<30;i++){
    var piece=new System.Windows.Shapes.Rectangle{Width=random.Next(5,9),Height=random.Next(4,8),RadiusX=1.5,RadiusY=1.5,Fill=new SolidColorBrush(HexColor(confettiColors[random.Next(confettiColors.Length)])),RenderTransformOrigin=new Point(.5,.5)};
-   var spin=new RotateTransform();piece.RenderTransform=spin;double x0=310+random.Next(-24,25),y0=26,dx=random.Next(-270,271);double up=random.Next(40,90),down=random.Next(110,200);
+   var spin=new RotateTransform();piece.RenderTransform=spin;double x0=320+random.Next(-24,25),y0=25,dx=random.Next(-270,271);double up=random.Next(40,90),down=random.Next(110,200);
    confettiLayer.Children.Add(piece);Canvas.SetLeft(piece,x0);Canvas.SetTop(piece,y0);
    var time=TimeSpan.FromMilliseconds(random.Next(800,1300));
    piece.BeginAnimation(Canvas.LeftProperty,new DoubleAnimation(x0,x0+dx,time){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}});
