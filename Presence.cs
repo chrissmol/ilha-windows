@@ -38,6 +38,8 @@ public static class DesktopContext {
   return p.X>=cx-(dipWidth/2+margin)*s&&p.X<=cx+(dipWidth/2+margin)*s&&p.Y>=r.Top+(8-margin)*s&&p.Y<=r.Top+(8+dipHeight+margin)*s;
  }
  public static bool IsToolWindow(IntPtr hwnd){int style=GetWindowLong(hwnd,-20);return (style&0x80)!=0&&(style&0x40000)==0;}
+ // Fullscreen = the shell says so (game, presentation) or a window covers the monitor; a maximized window that keeps its title bar is not fullscreen.
+ public static bool IsFullscreen(bool covers,bool zoomed,bool caption,int state){return state==2||state==3||state==4||(covers&&!(zoomed&&caption));}
  public static bool CoversMonitor(Rect rect,Rect monitor){return rect.Left<=monitor.Left+2&&rect.Top<=monitor.Top+2&&rect.Right>=monitor.Right-2&&rect.Bottom>=monitor.Bottom-2;}
  public static bool Suppress(IntPtr ownWindow,ISet<string> hiddenApps){
   var hwnd=GetForegroundWindow();if(hwnd==IntPtr.Zero||hwnd==ownWindow||!IsWindowVisible(hwnd)||IsIconic(hwnd))return false;
@@ -54,8 +56,8 @@ public static class DesktopContext {
   string[] known={"cs2","dota2","VALORANT-Win64-Shipping","FortniteClient-Win64-Shipping","Minecraft.Windows","RobloxPlayerBeta","RocketLeague","GenshinImpact","League of Legends","Overwatch","r5apex","RainbowSix","cod"};if(known.Contains(cachedName,StringComparer.OrdinalIgnoreCase))return true;
   var monitor=new MonitorInfo{Size=Marshal.SizeOf(typeof(MonitorInfo))};if(!GetMonitorInfo(MonitorFromWindow(hwnd,2),ref monitor))return false;
   Rect rect;if(DwmGetWindowAttribute(hwnd,9,out rect,Marshal.SizeOf(typeof(Rect)))!=0&&!GetWindowRect(hwnd,out rect))return false;
-  if(CoversMonitor(rect,monitor.Monitor)&&!IsZoomed(hwnd))return true;
-  int state;return SHQueryUserNotificationState(out state)==0&&(state==2||state==3||state==4);
+  int state;if(SHQueryUserNotificationState(out state)!=0)state=-1;
+  return IsFullscreen(CoversMonitor(rect,monitor.Monitor),IsZoomed(hwnd),(GetWindowLong(hwnd,-16)&0xC00000)==0xC00000,state);
  }
  public static Point Gaze(Window window){
   CursorPoint point;if(!GetCursorPos(out point))return new Point();

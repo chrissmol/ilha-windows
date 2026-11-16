@@ -12,7 +12,7 @@ public partial class App {
  static void RunLab(){
   var steps=new List<KeyValuePair<string,Action>>();
   steps.Add(new KeyValuePair<string,Action>("01-rest-to-open",()=>{SetPose(false,false);Expand(true);}));
-  string[] pages={"music","focus","agent","robo","agenda","notes","clipboard","settings","home"};
+  string[] pages={"music","focus","agent","robo","agenda","notes","clipboard","painel","settings","home"};
   for(int i=0;i<pages.Length;i++){string p=pages[i];steps.Add(new KeyValuePair<string,Action>((i+2).ToString("00")+"-to-"+p,()=>Switch(p)));}
   steps.Add(new KeyValuePair<string,Action>("99-open-to-rest",()=>Expand(false)));
   string dir=System.IO.Path.Combine(dataDir,"lab");Directory.CreateDirectory(dir);
