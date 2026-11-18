@@ -26,10 +26,38 @@ public partial class App {
  static Process motorProc;static string motorBase,motorLoaded;static readonly StringBuilder motorLog=new StringBuilder();
  static string MotorDir(){return System.IO.Path.Combine(dataDir,"motor");}
  static bool IsOllama(){return localModel.Length>0&&!localModel.StartsWith("tito:");}
- static string OllamaName(){return localModel.StartsWith("ollama:")?localModel.Substring(7):localModel;}
+ // External local AI: localModel = "ext:<port>:<model>" ("ollama:<model>" from older versions = port 11434). Same OpenAI-style API for Ollama, LM Studio, Jan, llama-server.
+ static int ExtPort(){if(localModel.StartsWith("ext:")){int i=localModel.IndexOf(':',4);int p;if(i>0&&int.TryParse(localModel.Substring(4,i-4),out p))return p;}return 11434;}
+ static string OllamaName(){if(localModel.StartsWith("ext:")){int i=localModel.IndexOf(':',4);return i>0?localModel.Substring(i+1):localModel;}return localModel.StartsWith("ollama:")?localModel.Substring(7):localModel;}
+ static string ExtSource(int port){return port==11434?"Ollama":port==1234?"LM Studio":port==1337?"Jan":"Servidor local";}
+ static readonly int[] extPorts={11434,1234,1337,8080};
+ static List<KeyValuePair<int,string>> extModels=new List<KeyValuePair<int,string>>();
+ // Biggest "NNb" in the name wins (e.g. qwen2.5:14b over 3b); without a size in the name, the first listed.
+ static double ModelWeight(string n){var mt=System.Text.RegularExpressions.Regex.Match(n,@"(\d+(?:\.\d+)?)\s*b\b",System.Text.RegularExpressions.RegexOptions.IgnoreCase);return mt.Success?double.Parse(mt.Groups[1].Value,System.Globalization.CultureInfo.InvariantCulture):0;}
+ static string ExtJson(int port,string path,string payload=null){
+  var req=(HttpWebRequest)WebRequest.Create("http://127.0.0.1:"+port+path);req.Timeout=payload==null?1500:300000;req.ReadWriteTimeout=req.Timeout;req.Proxy=null;
+  if(payload!=null){req.Method="POST";req.ContentType="application/json";byte[] b=Encoding.UTF8.GetBytes(payload);req.ContentLength=b.Length;using(var s=req.GetRequestStream())s.Write(b,0,b.Length);}
+  using(var res=req.GetResponse())using(var rd=new StreamReader(res.GetResponseStream()))return rd.ReadToEnd();
+ }
+ // Looks for AIs already running on this PC (loopback only). Embeddings-only models are skipped.
+ static async Task<List<KeyValuePair<int,string>>> ProbeLocalAIs(){
+  var found=new List<KeyValuePair<int,string>>();
+  foreach(int port in extPorts){
+   try{string raw=await Task.Run(()=>ExtJson(port,"/v1/models"));var data=json.Deserialize<Dictionary<string,object>>(raw);
+    foreach(Dictionary<string,object> e in (System.Collections.IEnumerable)data["data"]){string id=Convert.ToString(e["id"]);if(id.IndexOf("embed",StringComparison.OrdinalIgnoreCase)<0)found.Add(new KeyValuePair<int,string>(port,id));}}
+   catch{}
+  }
+  extModels=found;return found;
+ }
+ // No saved choice yet: use the best detected model, else stay on the embedded one.
+ static async void AutoPickModel(){
+  var found=await ProbeLocalAIs();if(found.Count==0)return;
+  var best=found[0];foreach(var f in found)if(ModelWeight(f.Value)>ModelWeight(best.Value))best=f;
+  localModel="ext:"+best.Key+":"+best.Value;
+ }
  static MotorModel MotorChoice(){string id=localModel.StartsWith("tito:")?localModel.Substring(5):"";foreach(var m in motorModels)if(m.Id==id)return m;return motorModels[0];}
  static string ModelPath(MotorModel m){return System.IO.Path.Combine(MotorDir(),"modelos",m.File);}
- static string MotorLabel(){return IsOllama()?"Ollama · "+OllamaName():"Tito · "+MotorChoice().Name;}
+ static string MotorLabel(){return IsOllama()?ExtSource(ExtPort())+" · "+OllamaName():"Tito · "+MotorChoice().Name;}
  static string GB(long b){return (b/1073741824.0).ToString("0.0")+" GB";}
  static string MB(long b){return (b/1048576.0).ToString("0")+" MB";}
  static void MotorReport(string text,double p){var h=MotorProgress;if(h!=null)h(text,p);}
@@ -41,7 +69,7 @@ public partial class App {
  static string MotorExe(){string d=System.IO.Path.Combine(MotorDir(),"engine-"+EngineTag);if(!Directory.Exists(d))return null;var f=Directory.GetFiles(d,"llama-server.exe",SearchOption.AllDirectories);return f.Length>0?f[0]:null;}
  static bool MotorReady(){return MotorExe()!=null&&File.Exists(ModelPath(MotorChoice()));}
  static string MotorStatusText(){
-  if(IsOllama())return "Usando o Ollama deste PC ("+OllamaName()+").";
+  if(IsOllama())return "Usando "+ExtSource(ExtPort())+" neste PC ("+OllamaName()+"). Nada sai do computador.";
   var m=MotorChoice();long need=(MotorExe()==null?EngineSize:0)+(File.Exists(ModelPath(m))?0:m.Size);
   return need==0?"IA embutida pronta. Tudo roda neste PC, sem enviar dados.":"Na primeira conversa o Tito baixa a IA sozinho (~"+(need>=1073741824?GB(need):MB(need))+", uma vez só) e roda tudo neste PC.";
  }
@@ -118,8 +146,11 @@ public partial class App {
 
  static async Task<string> MotorChat(List<Dictionary<string,string>> messages){
   string b=await MotorEnsure(MotorChoice());
-  string payload=json.Serialize(new{messages=messages,stream=false,max_tokens=600,temperature=0.7});
-  string raw=await Task.Run(()=>{var r=(HttpWebRequest)WebRequest.Create(b+"/v1/chat/completions");r.Method="POST";r.ContentType="application/json";r.Timeout=300000;r.ReadWriteTimeout=300000;r.Proxy=null;byte[] d=Encoding.UTF8.GetBytes(payload);r.ContentLength=d.Length;using(var s=r.GetRequestStream())s.Write(d,0,d.Length);using(var res=r.GetResponse())using(var rd=new StreamReader(res.GetResponseStream()))return rd.ReadToEnd();});
+  return await ChatCompletion(int.Parse(b.Substring(b.LastIndexOf(':')+1)),null,messages,600);
+ }
+ static async Task<string> ChatCompletion(int port,string model,List<Dictionary<string,string>> messages,int maxTokens){
+  var body=new Dictionary<string,object>{{"messages",messages},{"stream",false},{"max_tokens",maxTokens},{"temperature",0.7}};if(model!=null)body["model"]=model;
+  string raw=await Task.Run(()=>ExtJson(port,"/v1/chat/completions",json.Serialize(body)));
   var data=json.Deserialize<Dictionary<string,object>>(raw);var choice=(Dictionary<string,object>)((System.Collections.IList)data["choices"])[0];return Convert.ToString(((Dictionary<string,object>)choice["message"])["content"]).Trim();
  }
 
