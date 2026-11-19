@@ -35,12 +35,20 @@ public partial class App {
   dashStart=Btn("▶",()=>{if(running){remaining=Math.Max(0,(end-DateTime.UtcNow).TotalSeconds);running=false;}else{if(remaining<=0)remaining=1500;end=DateTime.UtcNow.AddSeconds(remaining);running=true;}UpdateDashboard();},"Iniciar / pausar foco");RoundTransport(dashStart);dashStart.Width=23;dashStart.Height=23;dashStart.Padding=new Thickness(0);dashStart.HorizontalAlignment=HorizontalAlignment.Right;dashStart.VerticalAlignment=VerticalAlignment.Bottom;dashStart.Margin=new Thickness(0,-2,-4,0);dashStart.Foreground=B("#51467B");dashStart.Background=B("#F5F1EB");f.Children.Add(dashStart);
   focus.MouseLeftButtonUp+=(s,e)=>{if(!IsButtonSource(e.OriginalSource as DependencyObject))Switch("focus");};dashCover="";UpdateDashboard();
  }
+ // Uma sessão por arquivo em Dados\sessions (o hook apaga no SessionEnd; ignora o que ficou parado há 2 h). Lê no máximo a cada 2 s.
+ static DateTime csAt=DateTime.MinValue;static int[] csCache=new[]{0,0};
+ static int[] ClaudeSessions(){
+  if(DateTime.UtcNow-csAt<TimeSpan.FromSeconds(2))return csCache;csAt=DateTime.UtcNow;int total=0,waiting=0;
+  try{string dir=System.IO.Path.Combine(dataDir,"sessions");if(Directory.Exists(dir))foreach(string f in Directory.GetFiles(dir,"*.json")){if(DateTime.UtcNow-File.GetLastWriteTimeUtc(f)>TimeSpan.FromHours(2))continue;var e=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(f));total++;if(e["event"]=="Notification")waiting++;}}catch{}
+  csCache=new[]{total,waiting};return csCache;
+ }
  static bool IsButtonSource(DependencyObject o){while(o!=null){if(o is Button)return true;try{o=VisualTreeHelper.GetParent(o);}catch{return false;}}return false;}
  static void UpdateDashboard(){
   if(page!="home"||dashTrack==null)return;
   dashTrack.Text=media.available&&!String.IsNullOrWhiteSpace(media.title)?media.title:"Nenhuma mídia";dashArtist.Text=media.available?(media.artist??""):"Abra seu player";dashPlay.Content=TransportIcon(media.playing?"pause":"play",true);dashTimer.Text=Format(Math.Ceiling(remaining));dashReady.Text=running?"Rodando":"Pronto";dashStart.Content=TransportIcon(running?"pause":"play",true);
   string cover=media.available?(media.cover??""):"";if(cover!=dashCover){dashCover=cover;dashImage.Source=null;try{if(File.Exists(cover)){var bmp=new BitmapImage();bmp.BeginInit();bmp.CacheOption=BitmapCacheOption.OnLoad;bmp.DecodePixelWidth=600;bmp.UriSource=new Uri(cover);bmp.EndInit();bmp.Freeze();dashImage.Source=bmp;Tint(bmp);}}catch{}}
   try{string path=System.IO.Path.Combine(dataDir,"agent.json");if(File.Exists(path)){var stamp=File.GetLastWriteTimeUtc(path);if(stamp!=agentStamp){agentStamp=stamp;agentEvent=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(path));}var e=agentEvent;dashAgent.Text=e["event"]=="Stop"?"Concluído":e["event"]=="SessionEnd"?"Encerrado":"Conectado";dashCount.Text=e["event"]=="SessionEnd"?"0":"1";}else{dashCount.Text="0";dashAgent.Text="Sem sessão";}}catch{}
+  var cs=ClaudeSessions();if(cs[0]>0){dashCount.Text=cs[0].ToString();dashAgent.Text=cs[1]>0?cs[1]+" aguardando você":cs[0]==1?"1 sessão":cs[0]+" sessões";}
  }
  static void Robo(){
   var layout=new Grid();layout.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});layout.RowDefinitions.Add(new RowDefinition());layout.RowDefinitions.Add(new RowDefinition{Height=GridLength.Auto});view.Children.Add(layout);

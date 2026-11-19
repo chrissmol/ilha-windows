@@ -87,3 +87,5 @@ Na aba Mídia, os olhos se transformam em sete barras que mostram o histórico r
 - Área de transferência: o histórico (15 itens) fica só na memória. Itens fixados (📌, até 30) são salvos em `Dados\clip-pinned.json`, no seu PC; use ✕ para remover. A busca filtra com Enter.
 
 - Notas: várias páginas (botões 1, 2, … e +), em `Dados\notes.txt`, `notes-2.txt` etc. A busca (Enter) abre a próxima página que contém o texto. O Robo grava e lê só a página 1.
+
+- Claude Code: o cartão do dashboard conta as sessões abertas (um arquivo por sessão em `Dados\sessions`, apagado no fim da sessão) e mostra "N aguardando você" quando alguma pede aprovação.
