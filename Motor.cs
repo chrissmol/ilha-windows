@@ -144,14 +144,24 @@ public partial class App {
   if(File.Exists(dest))File.Delete(dest);File.Move(part,dest);
  }
 
- static async Task<string> MotorChat(List<Dictionary<string,string>> messages){
+ static async Task<string> MotorChat(List<Dictionary<string,string>> messages,Action<string> onText=null){
   string b=await MotorEnsure(MotorChoice());
-  return await ChatCompletion(int.Parse(b.Substring(b.LastIndexOf(':')+1)),null,messages,600);
+  return await ChatStream(int.Parse(b.Substring(b.LastIndexOf(':')+1)),null,messages,onText);
  }
- static async Task<string> ChatCompletion(int port,string model,List<Dictionary<string,string>> messages,int maxTokens){
-  var body=new Dictionary<string,object>{{"messages",messages},{"stream",false},{"max_tokens",maxTokens},{"temperature",0.7}};if(model!=null)body["model"]=model;
-  string raw=await Task.Run(()=>ExtJson(port,"/v1/chat/completions",json.Serialize(body)));
-  var data=json.Deserialize<Dictionary<string,object>>(raw);var choice=(Dictionary<string,object>)((System.Collections.IList)data["choices"])[0];return Convert.ToString(((Dictionary<string,object>)choice["message"])["content"]).Trim();
+ // OpenAI-style streaming chat; also used for Ollama, LM Studio, Jan and other servers already running on this PC.
+ static async Task<string> ChatStream(int port,string model,List<Dictionary<string,string>> messages,Action<string> onText){
+  var body=new Dictionary<string,object>{{"messages",messages},{"stream",true},{"max_tokens",600},{"temperature",0.7}};if(model!=null)body["model"]=model;
+  string payload=json.Serialize(body);
+  return await Task.Run(()=>PostStream("http://127.0.0.1:"+port+"/v1/chat/completions",payload,300000,line=>{
+   if(!line.StartsWith("data:"))return null;string d=line.Substring(5).Trim();if(d=="[DONE]")return null;
+   var delta=(Dictionary<string,object>)((Dictionary<string,object>)((System.Collections.IList)json.Deserialize<Dictionary<string,object>>(d)["choices"])[0])["delta"];
+   return delta.ContainsKey("content")?Convert.ToString(delta["content"]):null;},onText));
+ }
+ // POSTs and reads the reply line by line; deltaOf turns one line into new text (or null). Returns the full text.
+ static string PostStream(string url,string payload,int timeout,Func<string,string> deltaOf,Action<string> onText){
+  var r=(HttpWebRequest)WebRequest.Create(url);r.Method="POST";r.ContentType="application/json";r.Timeout=timeout;r.ReadWriteTimeout=timeout;r.Proxy=null;byte[] d=Encoding.UTF8.GetBytes(payload);r.ContentLength=d.Length;using(var s=r.GetRequestStream())s.Write(d,0,d.Length);
+  var sb=new StringBuilder();using(var res=r.GetResponse())using(var rd=new StreamReader(res.GetResponseStream())){string line;while((line=rd.ReadLine())!=null){string t=deltaOf(line);if(String.IsNullOrEmpty(t))continue;sb.Append(t);if(onText!=null)onText(sb.ToString());}}
+  return sb.ToString().Trim();
  }
 
  // `Tito.exe --motor-test` (CI): full real path, download -> hash -> extract -> start -> one chat turn.

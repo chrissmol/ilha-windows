@@ -121,19 +121,19 @@ public partial class App {
   }finally{try{Directory.Delete(@"\\?\"+home,true);}catch{}}
  }
  static Border Tile(string title,UIElement content,int column){
-  var stack=Stack();var label=T(title,9.5,"#AFA9B4");label.Margin=new Thickness(0,0,0,6);stack.Children.Add(label);stack.Children.Add(content);
-  var tile=new Border{Background=B("#16FFFFFF"),CornerRadius=new CornerRadius(14),Padding=new Thickness(11,9,11,9),Margin=new Thickness(column==0?0:4,0,column==2?0:4,0),Child=stack};Grid.SetColumn(tile,column);return tile;
+  var stack=Stack();var label=T(title,9.5,Theme.Muted);label.Margin=new Thickness(0,0,0,6);stack.Children.Add(label);stack.Children.Add(content);
+  var tile=new Border{Background=B(Theme.Card),CornerRadius=new CornerRadius(14),Padding=new Thickness(11,9,11,9),Margin=new Thickness(column==0?0:4,0,column==2?0:4,0),Child=stack};Grid.SetColumn(tile,column);return tile;
  }
  static UIElement LimitRow(string label,double pct,double resets=0){
   if(resets>0&&resets<=(DateTime.UtcNow-new DateTime(1970,1,1,0,0,0,DateTimeKind.Utc)).TotalSeconds){pct=0;label+=" · renovou";}
-  pct=Math.Max(0,Math.Min(100,pct));string color=pct>=90?"#FF453A":pct>=70?"#FF9F0A":"#30D158";
+  pct=Math.Max(0,Math.Min(100,pct));string color=pct>=90?Theme.Bad:pct>=70?Theme.Warn:Theme.Ok;
   var head=new Grid();head.Children.Add(T(label,11.5));var value=T(Math.Round(pct)+"%",11.5,color);value.HorizontalAlignment=HorizontalAlignment.Right;head.Children.Add(value);
   var bar=new Grid{Height=6,Margin=new Thickness(0,3,0,7)};bar.Children.Add(new Border{Background=B("#26FFFFFF"),CornerRadius=new CornerRadius(3)});
   var fill=new Border{Background=B(color),CornerRadius=new CornerRadius(3),HorizontalAlignment=HorizontalAlignment.Left};bar.SizeChanged+=(s,e)=>fill.Width=bar.ActualWidth*pct/100;bar.Children.Add(fill);
   var row=Stack();row.Children.Add(head);row.Children.Add(bar);return row;
  }
  static UIElement UsageRow(string label,string value){
-  var row=new Grid{Margin=new Thickness(0,0,0,5)};row.Children.Add(T(label,11.5));var v=T(value,11.5,"#64D2FF");v.HorizontalAlignment=HorizontalAlignment.Right;row.Children.Add(v);return row;
+  var row=new Grid{Margin=new Thickness(0,0,0,5)};row.Children.Add(T(label,11.5));var v=T(value,11.5,Theme.Info);v.HorizontalAlignment=HorizontalAlignment.Right;row.Children.Add(v);return row;
  }
  static void PainelPage(){
   var root=new Grid();view.Children.Add(root);
@@ -142,7 +142,7 @@ public partial class App {
   if(painelState!=1||painel==null||empty){
    var box=Stack();box.VerticalAlignment=VerticalAlignment.Center;box.HorizontalAlignment=HorizontalAlignment.Center;
    var title=T(painelState==0?"Painel IA · lendo seus logs…":painelState==2?"Não consegui ler os logs":"Sem uso de IA por aqui ainda",18);title.HorizontalAlignment=HorizontalAlignment.Center;box.Children.Add(title);
-   var hint=T(painelState==0?"Só na primeira vez pode levar alguns segundos.":painelState==2?"Tente de novo em instantes.":"Use o Claude Code ou o Codex neste PC e o painel aparece sozinho.",11,"#AFA9B4");hint.HorizontalAlignment=HorizontalAlignment.Center;hint.Margin=new Thickness(0,4,0,10);box.Children.Add(hint);
+   var hint=T(painelState==0?"Só na primeira vez pode levar alguns segundos.":painelState==2?"Tente de novo em instantes.":"Use o Claude Code ou o Codex neste PC e o painel aparece sozinho.",11,Theme.Muted);hint.HorizontalAlignment=HorizontalAlignment.Center;hint.Margin=new Thickness(0,4,0,10);box.Children.Add(hint);
    if(painelState==2){var retry=PillButton("Tentar de novo",()=>{painelNext=DateTime.UtcNow;painelState=0;Switch("painel");});retry.HorizontalAlignment=HorizontalAlignment.Center;box.Children.Add(retry);}
    root.Children.Add(box);return;
   }
@@ -159,13 +159,13 @@ public partial class App {
   root.Children.Add(Tile("USO AGORA",limits,0));
   var used=Stack();var tokens=(painel.ContainsKey("tokens_por_modelo")?PainelList(painel["tokens_por_modelo"]):new List<Dictionary<string,object>>()).Where(t=>PainelActive(Convert.ToString(t["ia"]))).ToList();
   var total=T(Millions(tokens.Sum(x=>Num(x["tokens"]))),24);total.FontWeight=FontWeights.SemiBold;used.Children.Add(total);
-  foreach(var x in tokens.Where(t=>Num(t["tokens"])>0).Take(4)){var line=new Grid{Margin=new Thickness(0,2,0,0)};var name=T(Convert.ToString(x["modelo"]).Replace("claude-",""),10.5,"#D7CFD0");name.TextTrimming=TextTrimming.CharacterEllipsis;name.Margin=new Thickness(0,0,48,0);line.Children.Add(name);var n=T(Millions(Num(x["tokens"])),10.5,"#AFA9B4");n.HorizontalAlignment=HorizontalAlignment.Right;line.Children.Add(n);used.Children.Add(line);}
+  foreach(var x in tokens.Where(t=>Num(t["tokens"])>0).Take(4)){var line=new Grid{Margin=new Thickness(0,2,0,0)};var name=T(Convert.ToString(x["modelo"]).Replace("claude-",""),10.5,"#D7CFD0");name.TextTrimming=TextTrimming.CharacterEllipsis;name.Margin=new Thickness(0,0,48,0);line.Children.Add(name);var n=T(Millions(Num(x["tokens"])),10.5,Theme.Muted);n.HorizontalAlignment=HorizontalAlignment.Right;line.Children.Add(n);used.Children.Add(line);}
   root.Children.Add(Tile("TOKENS · 30 DIAS",used,1));
   var weeks=new double[13];int claude=0,codex=0;
   if(act!=null)foreach(var day in act){DateTime d;if(!DateTime.TryParseExact(day.Key,"yyyy-MM-dd",CultureInfo.InvariantCulture,DateTimeStyles.None,out d))continue;int back=(int)(DateTime.Now.Date-d).TotalDays/7;var counts=day.Value as Dictionary<string,object>;if(counts==null||back<0||back>12)continue;foreach(var c in counts){if(!PainelActive(c.Key))continue;weeks[12-back]+=Num(c.Value);if(c.Key=="claude")claude+=(int)Num(c.Value);else codex+=(int)Num(c.Value);}}
   var bars=new Grid{Height=88};double max=Math.Max(1,weeks.Max());for(int i=0;i<13;i++)bars.ColumnDefinitions.Add(new ColumnDefinition());
-  for(int i=0;i<13;i++){var bar=new Border{Background=B(i==12?"#64D2FF":"#3A8FB5"),CornerRadius=new CornerRadius(2),VerticalAlignment=VerticalAlignment.Bottom,Margin=new Thickness(1.2,0,1.2,0),Height=Math.Max(2,80*weeks[i]/max)};Grid.SetColumn(bar,i);bars.Children.Add(bar);}
-  var activity=Stack();activity.Children.Add(bars);var legend=T(String.Join(" · ",new[]{PainelActive("claude")?"Claude "+claude:null,PainelActive("codex")?"Codex "+codex:null}.Where(x=>x!=null)),10,"#AFA9B4");legend.Margin=new Thickness(0,5,0,0);legend.TextTrimming=TextTrimming.CharacterEllipsis;activity.Children.Add(legend);
+  for(int i=0;i<13;i++){var bar=new Border{Background=B(i==12?Theme.Info:"#3A8FB5"),CornerRadius=new CornerRadius(2),VerticalAlignment=VerticalAlignment.Bottom,Margin=new Thickness(1.2,0,1.2,0),Height=Math.Max(2,80*weeks[i]/max)};Grid.SetColumn(bar,i);bars.Children.Add(bar);}
+  var activity=Stack();activity.Children.Add(bars);var legend=T(String.Join(" · ",new[]{PainelActive("claude")?"Claude "+claude:null,PainelActive("codex")?"Codex "+codex:null}.Where(x=>x!=null)),10,Theme.Muted);legend.Margin=new Thickness(0,5,0,0);legend.TextTrimming=TextTrimming.CharacterEllipsis;activity.Children.Add(legend);
   root.Children.Add(Tile("ATIVIDADE · 13 SEMANAS",activity,2));
  }
 }
