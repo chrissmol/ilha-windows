@@ -29,7 +29,7 @@ public partial class App {
  static MediaState media=new MediaState();
  static bool useSystem=true; static Process mediaWorker; static int poll;
  static TextBlock mediaArtist,mediaHint,agentStatus,agentDetail,agentAge;
- static Image albumImage;static string lastCover="",lastAgent="";
+ static Image albumImage;static string lastCover="",lastAgent="";static DateTime lastAgentStamp,lastMediaStamp;static TextBlock lastAgentUi;
  static Slider systemSeek;static Button systemPlay,systemNext,systemPrevious;static Line rulerMarker;static Canvas rulerCanvas;
  static DispatcherTimer leaveTimer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(30)};
  static string Accent(string n){return n=="music"?"#FF375F":n=="focus"?"#BF5AF2":n=="ia"?"#FF9F0A":n=="agenda"?"#FF453A":n=="notes"?"#FFD60A":n=="clipboard"?"#30D158":"#FFFFFF";}
@@ -96,6 +96,7 @@ public partial class App {
  static void UpdateAgent(){
   if(!On("geral")||agentStatus==null)return;
   string path=System.IO.Path.Combine(dataDir,"agent.json");if(!File.Exists(path)){agentDetail.Text="Conecte uma sessão para acompanhar eventos reais.";return;}
+  DateTime agentStamp=File.GetLastWriteTimeUtc(path);if(agentStamp==lastAgentStamp&&ReferenceEquals(lastAgentUi,agentStatus))return;lastAgentStamp=agentStamp;lastAgentUi=agentStatus;
   try{var e=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(path));string ev=e.ContainsKey("event")?e["event"]:"";string tool=e.ContainsKey("tool")?e["tool"]:"";
    agentStatus.Text=ev=="Stop"?"Concluído":ev=="Notification"?"Aguardando sua atenção":ev=="SessionEnd"?"Sessão encerrada":ev=="PreToolUse"?"Executando · "+tool:ev=="PostToolUse"?"Ferramenta concluída · "+tool:ev=="UserPromptSubmit"?"Trabalhando":"Sessão conectada";
    agentDetail.Text=(e.ContainsKey("project")?e["project"]:"")+(e.ContainsKey("file")?"  /  "+e["file"]:"");DateTime stamp;if(DateTime.TryParse(e["updated"],out stamp))agentAge.Text="Último evento às "+stamp.ToLocalTime().ToString("HH:mm:ss");
@@ -104,7 +105,7 @@ public partial class App {
  }
  static void PollIntegrations(){
   if(++poll%4!=0)return;
-  try{string path=System.IO.Path.Combine(dataDir,"media.json");if(File.Exists(path)){media=json.Deserialize<MediaState>(File.ReadAllText(path));DateTime stamp;if(!DateTime.TryParse(media.updated,out stamp)||DateTime.UtcNow-stamp.ToUniversalTime()>TimeSpan.FromSeconds(12)){media.available=false;media.playing=false;media.cover="";media.artist="A conexão de mídia foi interrompida.";}UpdateSystemMusic();}}
+  try{string path=System.IO.Path.Combine(dataDir,"media.json");if(File.Exists(path)){DateTime written=File.GetLastWriteTimeUtc(path);if(written!=lastMediaStamp){lastMediaStamp=written;media=json.Deserialize<MediaState>(File.ReadAllText(path));}DateTime stamp;if(!DateTime.TryParse(media.updated,out stamp)||DateTime.UtcNow-stamp.ToUniversalTime()>TimeSpan.FromSeconds(12)){media.available=false;media.playing=false;media.cover="";media.artist="A conexão de mídia foi interrompida.";}UpdateSystemMusic();}}
   catch{}
 
   UpdateAgent();UpdateDashboard();

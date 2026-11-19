@@ -115,10 +115,12 @@ public partial class App {
   if((next-gazeNow).Length>.004){gazeNow=next;m.GazeX=next.X;m.GazeY=next.Y;m.InvalidateVisual();}
  }
  static void HoverTick(){
-  if(uiTest||contextHidden||!w.IsVisible)return;
+  if(uiTest||contextHidden||!w.IsVisible){if(hoverTimer!=null)hoverTimer.Interval=TimeSpan.FromMilliseconds(250);return;}
   GazeTick();
   double tw=opened?600:(compactWide?compactWidth:128),th=opened?270:34;bool inside=DesktopContext.CursorInside(w,tw,th,opened?2:0);
   if(opened){if(!inside&&System.Windows.Input.Mouse.Captured==null&&!dropHover)Expand(false);}else if(inside&&!doNotDisturb)Expand(true);
+  // 33 ms só quando há o que animar; em repouso 100 ms bastam para detectar o mouse.
+  hoverTimer.Interval=TimeSpan.FromMilliseconds(opened||inside||gazeNow.X!=0||gazeNow.Y!=0||DateTime.UtcNow<gazeUntil?33:100);
  }
  static void PresenceTick(){
   SyncFullscreenHide();
