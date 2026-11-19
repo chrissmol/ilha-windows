@@ -81,13 +81,13 @@ public partial class App {
   root.DropDownItems.Add("…");return root;
  }
  static UIElement MonitorsCard(){
-  var box=Stack();var title=T("Telas",12,"#E3D9E8");title.Margin=new Thickness(8,4,0,4);box.Children.Add(title);
+  var box=Stack();var title=T("Telas",12,Theme.Heading);title.Margin=new Thickness(8,4,0,4);box.Children.Add(title);
   var off=OffMonitors();var fsOff=FullscreenOff();var screens=Forms.Screen.AllScreens;
   for(int i=0;i<screens.Length;i++){int n=i;
-   var cap=T(MonitorLabel(i),10.5,"#B9ADB9");cap.Margin=new Thickness(8,4,8,2);box.Children.Add(cap);
+   var cap=T(MonitorLabel(i),10.5,Theme.Soft);cap.Margin=new Thickness(8,4,8,2);box.Children.Add(cap);
    box.Children.Add(ToggleRow("Mostrar Tito",!off.Contains(i),v=>SetMonitor(n,v)));
    box.Children.Add(ToggleRow("Ocultar em tela cheia",!fsOff.Contains(i),v=>SetFullscreenHide(n,v)));}
-  var hint=T("Ctrl+Alt+T abre o Tito na tela do mouse (ou religa, se estiver desligado).",10.5,"#B9ADB9");hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new Thickness(8,4,8,4);box.Children.Add(hint);
+  var hint=T("Ctrl+Alt+T abre o Tito na tela do mouse (ou religa, se estiver desligado).",10.5,Theme.Soft);hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new Thickness(8,4,8,4);box.Children.Add(hint);
   return CardBox(box);
  }
 }
