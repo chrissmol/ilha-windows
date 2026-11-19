@@ -63,10 +63,22 @@ public partial class App {
   notesBox=new TextBox{Text=saved,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Background=B("#18FFFFFF"),Foreground=B(Theme.Text),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(10),FontSize=13,MinHeight=130,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
   notesBox.TextChanged+=(s,e)=>{typingUntil=DateTime.UtcNow.AddSeconds(3);notesPending=notesBox.Text;if(notesSave==null){notesSave=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(600)};notesSave.Tick+=(a,b)=>FlushNotes();w.Closed+=(a,b)=>FlushNotes();}notesSave.Stop();notesSave.Start();};rows.Children.Add(notesBox);
  }
+ // Só os itens fixados vão para o disco (clip-pinned.json); o histórico continua só na memória.
+ static List<string> clipPinned;static string clipFilter="";
+ static string PinPath(){return Path.Combine(dataDir,"clip-pinned.json");}
+ static List<string> Pins(){if(clipPinned==null){clipPinned=new List<string>();try{if(File.Exists(PinPath()))clipPinned=json.Deserialize<List<string>>(File.ReadAllText(PinPath()));}catch{}}return clipPinned;}
+ static void SavePins(){try{File.WriteAllText(PinPath(),json.Serialize(Pins()));}catch{}}
  static void ClipboardPage(){
-  ScrollViewer sc;var rows=Panel("Área de transferência",out sc,Btn("Limpar",()=>{clipItems.Clear();Switch("clipboard");}));
-  if(clipItems.Count==0)rows.Children.Add(T("Copie um texto e ele aparece aqui. Fica só na memória.",13,"#BDBDC5"));
-  foreach(string item in clipItems.ToArray()){string text=item;string line=text.Replace("\r"," ").Replace("\n"," ");var b=Btn(line.Length>70?line.Substring(0,70)+"…":line,()=>{lastClip=text;Clipboard.SetText(text);celebrateUntil=DateTime.UtcNow.AddSeconds(2);},"Copiar de novo");b.HorizontalContentAlignment=HorizontalAlignment.Left;b.Margin=new Thickness(0,1,0,1);rows.Children.Add(b);}
+  ScrollViewer sc;var rows=Panel("Área de transferência",out sc,Btn("Limpar",()=>{clipItems.Clear();Switch("clipboard");},"Limpa o histórico; os fixados ficam"));
+  var search=new TextBox{Text=clipFilter,Background=B("#18FFFFFF"),Foreground=B(Theme.Text),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(8,5,8,5),FontSize=12,ToolTip="Digite e aperte Enter para filtrar",Margin=new Thickness(0,0,0,6)};
+  search.KeyDown+=(s,e)=>{if(e.Key!=System.Windows.Input.Key.Enter)return;clipFilter=search.Text.Trim();Switch("clipboard");};rows.Children.Add(search);
+  Func<string,bool> match=t=>clipFilter==""||t.IndexOf(clipFilter,StringComparison.CurrentCultureIgnoreCase)>=0;
+  var pins=Pins().Where(match).ToList();var recent=clipItems.Where(t=>match(t)&&!Pins().Contains(t)).ToList();
+  if(pins.Count==0&&recent.Count==0)rows.Children.Add(T(clipFilter==""?"Copie um texto e ele aparece aqui. O histórico fica só na memória; fixe (📌) o que quiser guardar.":"Nada encontrado.",13,"#BDBDC5"));
+  foreach(string item in pins.Concat(recent)){string text=item;bool pinned=Pins().Contains(text);string line=text.Replace("\r"," ").Replace("\n"," ");
+   var row=new DockPanel{Margin=new Thickness(0,1,0,1)};
+   var pin=Btn(pinned?"✕":"📌",()=>{if(pinned)Pins().Remove(text);else{Pins().Remove(text);Pins().Insert(0,text);if(Pins().Count>30)Pins().RemoveAt(30);}SavePins();Switch("clipboard");},pinned?"Desafixar":"Fixar (salva no disco)");DockPanel.SetDock(pin,Dock.Right);row.Children.Add(pin);
+   var b=Btn((pinned?"📌 ":"")+(line.Length>64?line.Substring(0,64)+"…":line),()=>{lastClip=text;Clipboard.SetText(text);celebrateUntil=DateTime.UtcNow.AddSeconds(2);},"Copiar de novo");b.HorizontalContentAlignment=HorizontalAlignment.Left;row.Children.Add(b);rows.Children.Add(row);}
  }
  static List<string[]> AgendaEntries(){
   var list=new List<string[]>();try{if(File.Exists(AgendaPath()))foreach(string line in File.ReadAllLines(AgendaPath())){var p=line.Split(new[]{'|'},3);if(p.Length==3)list.Add(p);}}catch{}
