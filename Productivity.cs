@@ -12,7 +12,15 @@ public partial class App {
  // Notes, clipboard history and a local agenda. Nothing here leaves the machine.
  static readonly List<string> clipItems=new List<string>();static string lastClip="";static TextBox notesBox;
  [System.Runtime.InteropServices.DllImport("kernel32.dll")] public static extern uint SetThreadExecutionState(uint flags);
- static bool keepAwake,batteryLow,batteryKnown,wasCharging;static DateTime curiousUntil,typingUntil,dizzyUntil,excitedUntil,loveUntil,winkUntil,agentBusyUntil,nextQuirk=DateTime.UtcNow.AddSeconds(10),quirkUntil;static Point quirkGaze;
+ static bool keepAwake,batteryLow,batteryKnown,wasCharging;static DateTime curiousUntil,typingUntil,dizzyUntil,excitedUntil,loveUntil,winkUntil,agentBusyUntil,nextQuirk=DateTime.UtcNow.AddSeconds(10),quirkUntil;static Point quirkGaze;static bool agendaSoon,cpuHigh;static long cpuIdle,cpuTotal;static int cpuStreak;static DateTime cpuAt;static DateTime welcomeUntil=DateTime.UtcNow.AddSeconds(3),chatDoneUntil;static bool chatWasBusy;
+ [System.Runtime.InteropServices.DllImport("kernel32.dll")] static extern bool GetSystemTimes(out long idle,out long kernel,out long user);
+ // CPU quase cheia por ~9 s: Tito fica preocupado. Uma leitura barata a cada 3 s.
+ static void CpuTick(){
+  var now=DateTime.UtcNow;if(now-cpuAt<TimeSpan.FromSeconds(3))return;cpuAt=now;
+  long i,k,u;if(!GetSystemTimes(out i,out k,out u))return;long total=k+u;
+  if(cpuTotal>0&&total>cpuTotal){double busy=1-(double)(i-cpuIdle)/(total-cpuTotal);cpuStreak=busy>=.92?cpuStreak+1:0;cpuHigh=cpuStreak>=3;}
+  cpuIdle=i;cpuTotal=total;
+ }
  static readonly Queue<DateTime> taps=new Queue<DateTime>();
  // Tito reacts to taps: a giggle, and dizzy after five quick ones.
  static void MascotTap(){
@@ -79,11 +87,13 @@ public partial class App {
  }
  // Called from the 250 ms ticker: fires once per entry, only within 2 min after its time (so old entries don't ring when Tito opens).
  static void AgendaReminderTick(){
-  DateTime now=DateTime.Now;if(now-lastAgendaCheck<TimeSpan.FromSeconds(1))return;lastAgendaCheck=now;
+  DateTime now=DateTime.Now;if(now-lastAgendaCheck<TimeSpan.FromSeconds(1))return;lastAgendaCheck=now;bool soon=false;
   foreach(var p in AgendaEntries()){DateTime at;if(!DateTime.TryParseExact(p[0]+" "+p[1],"yyyy-MM-dd HH:mm",CultureInfo.InvariantCulture,DateTimeStyles.None,out at))continue;
+   if(at>now&&at-now<=TimeSpan.FromMinutes(10))soon=true;
    if(now<at||now-at>TimeSpan.FromMinutes(2)||!agendaFired.Add(p[0]+"|"+p[1]+"|"+p[2]))continue;
    excitedUntil=DateTime.UtcNow.AddSeconds(6);if(contextHidden||doNotDisturb)continue;
    System.Media.SystemSounds.Asterisk.Play();if(tray!=null)tray.ShowBalloonTip(5000,"Tito · "+p[1],p[2],Forms.ToolTipIcon.Info);Switch("agenda");Expand(true);}
+  agendaSoon=soon;
  }
  static void Agenda(){
   ScrollViewer sc;var rows=Panel("Agenda",out sc);
