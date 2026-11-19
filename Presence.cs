@@ -128,12 +128,13 @@ public partial class App {
   double k=1-Math.Exp(-dt/(target.X!=0||target.Y!=0?.07:.24));var next=new Point(gazeNow.X+(target.X-gazeNow.X)*k,gazeNow.Y+(target.Y-gazeNow.Y)*k);
   if((next-gazeNow).Length>.004){gazeNow=next;m.GazeX=next.X;m.GazeY=next.Y;m.InvalidateVisual();}
  }
+ static bool hoverArmed; // só abre por hover depois de o mouse ter saído da área uma vez (ex.: Tito reaberto com o mouse em cima)
  static DateTime hoverSince=DateTime.MinValue;static readonly TimeSpan HoverDelay=TimeSpan.FromMilliseconds(350);
  static void HoverTick(){
   if(uiTest||contextHidden||!w.IsVisible){if(hoverTimer!=null)hoverTimer.Interval=TimeSpan.FromMilliseconds(250);return;}
   GazeTick();
   double tw=opened?600:(compactWide?compactWidth:128),th=opened?270:34;bool inside=DesktopContext.CursorInside(w,tw,th,opened?2:0);
-  if(opened){if(!inside&&System.Windows.Input.Mouse.Captured==null&&!dropHover)Expand(false);}else if(!inside)hoverSince=DateTime.MinValue;else if(!doNotDisturb){if(hoverSince==DateTime.MinValue)hoverSince=DateTime.UtcNow;else if(DateTime.UtcNow-hoverSince>=HoverDelay){hoverSince=DateTime.MinValue;Expand(true);}} // abre só depois de um instante com o mouse em cima
+  if(opened){if(!inside&&System.Windows.Input.Mouse.Captured==null&&!dropHover)Expand(false);}else if(!inside){hoverSince=DateTime.MinValue;hoverArmed=true;}else if(!doNotDisturb&&hoverArmed){if(hoverSince==DateTime.MinValue)hoverSince=DateTime.UtcNow;else if(DateTime.UtcNow-hoverSince>=HoverDelay){hoverSince=DateTime.MinValue;Expand(true);}} // abre só depois de um instante com o mouse em cima
   // 33 ms só quando há o que animar; em repouso 100 ms bastam para detectar o mouse.
   hoverTimer.Interval=TimeSpan.FromMilliseconds(opened||inside||gazeNow.X!=0||gazeNow.Y!=0||DateTime.UtcNow<gazeUntil?33:100);
  }

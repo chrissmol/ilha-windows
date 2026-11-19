@@ -26,27 +26,7 @@ public partial class App {
   bounce.KeyFrames.Add(new LinearDoubleKeyFrame(.8,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(90))));bounce.KeyFrames.Add(new LinearDoubleKeyFrame(1.22,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(230))));bounce.KeyFrames.Add(new LinearDoubleKeyFrame(1.12,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(380))));
   icon.Effect=new System.Windows.Media.Effects.DropShadowEffect{Color=HexColor(PageHex(page)),BlurRadius=10,ShadowDepth=0,Opacity=.9};scale.BeginAnimation(ScaleTransform.ScaleXProperty,bounce);scale.BeginAnimation(ScaleTransform.ScaleYProperty,bounce);
  }
- // Eyes glance toward the new drawer, then it changes. Only when open and motion is allowed.
- static DispatcherTimer goTimer;
- static void GoTo(string target){
-  int d=Array.IndexOf(pageOrder,target)-Array.IndexOf(pageOrder,page);
-  if(d==0||!opened||!SystemParameters.ClientAreaAnimation){Switch(target);return;}
-  if(goTimer!=null)goTimer.Stop();
-  quirkGaze=new Point(d>0?2:-2,0);quirkUntil=DateTime.UtcNow.AddMilliseconds(350);
-  goTimer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(90)};goTimer.Tick+=(s,e)=>{goTimer.Stop();Switch(target);};goTimer.Start();
- }
- // Content enters in a cascade: each child of the page root rises 6 px and fades in, 30 ms after the previous one (max 5).
- static void Cascade(){
-  var root=view.Children.Count>0?view.Children[0] as Panel:null;if(root==null)return;
-  for(int i=0;i<root.Children.Count&&i<5;i++){
-   var c=root.Children[i];if(c.Opacity!=1||(c.RenderTransform!=null&&c.RenderTransform!=Transform.Identity))continue;
-   var rise=new TranslateTransform(0,6);c.RenderTransform=rise;var delay=TimeSpan.FromMilliseconds(60+30*i);
-   var up=new DoubleAnimation(6,0,TimeSpan.FromMilliseconds(260)){BeginTime=delay,EasingFunction=new QuinticEase{EasingMode=EasingMode.EaseOut}};
-   var target=c;up.Completed+=(s,e)=>target.RenderTransform=Transform.Identity;
-   rise.BeginAnimation(TranslateTransform.YProperty,up);
-   c.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(220)){BeginTime=delay,FillBehavior=FillBehavior.Stop});
-  }
- }
+ static void GoTo(string target){Switch(target);}
  static readonly string[] confettiColors={"#FF375F",Theme.Warn,"#FFD60A",Theme.Ok,Theme.Info,"#BF5AF2"};
  static void Confetti(){
   if(confettiLayer==null||!SystemParameters.ClientAreaAnimation)return;var random=new Random();
