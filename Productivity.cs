@@ -44,7 +44,11 @@ public partial class App {
   try{File.AppendAllText(Path.Combine(dataDir,"focus-log.txt"),DateTime.Now.ToString("yyyy-MM-dd HH:mm")+"|"+(onBreak?"pausa":"foco")+"\n");}catch{}
   if(!onBreak)focusCycles++;onBreak=!onBreak;remaining=onBreak?(focusCycles%4==0?900:300):1500;
  }
- static string NotesPath(){return Path.Combine(dataDir,"notes.txt");}
+ // Páginas de nota: a 1 é notes.txt (compatível com antes), as outras notes-N.txt.
+ static int notesPage=1;
+ static string NotesPath(int n=0){if(n==0)n=notesPage;return Path.Combine(dataDir,n==1?"notes.txt":"notes-"+n+".txt");}
+ static int NotePages(){int n=1;while(File.Exists(NotesPath(n+1)))n++;return n;}
+ static void GoNotePage(int n){FlushNotes();notesPage=n;Switch("notes");}
  static string AgendaPath(){return Path.Combine(dataDir,"agenda.txt");}
  [System.Runtime.InteropServices.DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();static uint clipSeq;
  static void ClipboardTick(){
@@ -66,6 +70,11 @@ public partial class App {
  static void Notes(){
   FlushNotes();ScrollViewer sc;var rows=Panel("Notas",out sc);
   string saved="";try{if(File.Exists(NotesPath()))saved=File.ReadAllText(NotesPath());}catch{}
+  var bar=Stack(Orientation.Horizontal);bar.Margin=new Thickness(0,0,0,6);int total=NotePages();
+  for(int n=1;n<=total;n++){int pg=n;var tab=Btn(n.ToString(),()=>GoNotePage(pg),"Página "+n);tab.Padding=new Thickness(8,2,8,2);if(n==notesPage)tab.Background=B("#40FFFFFF");bar.Children.Add(tab);}
+  var more=Btn("+",()=>{int next=NotePages()+1;try{File.WriteAllText(NotesPath(next),"");}catch{}GoNotePage(next);},"Nova página");more.Padding=new Thickness(8,2,8,2);bar.Children.Add(more);
+  var find=new TextBox{Width=110,Background=B("#18FFFFFF"),Foreground=B(Theme.Text),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(6,3,6,3),FontSize=11,Margin=new Thickness(8,0,0,0),ToolTip="Buscar nas páginas (Enter)"};
+  find.KeyDown+=(s2,e2)=>{if(e2.Key!=System.Windows.Input.Key.Enter||find.Text.Trim()=="")return;FlushNotes();int count=NotePages();for(int k=1;k<=count;k++){int n=(notesPage-1+k)%count+1;try{if(File.ReadAllText(NotesPath(n)).IndexOf(find.Text.Trim(),StringComparison.CurrentCultureIgnoreCase)>=0){GoNotePage(n);return;}}catch{}}find.Text="Nada encontrado";};bar.Children.Add(find);rows.Children.Add(bar);
   notesBox=new TextBox{Text=saved,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Background=B("#18FFFFFF"),Foreground=B(Theme.Text),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(10),FontSize=13,MinHeight=130,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
   notesBox.TextChanged+=(s,e)=>{typingUntil=DateTime.UtcNow.AddSeconds(3);notesPending=notesBox.Text;if(notesSave==null){notesSave=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(600)};notesSave.Tick+=(a,b)=>FlushNotes();w.Closed+=(a,b)=>FlushNotes();}notesSave.Stop();notesSave.Start();};rows.Children.Add(notesBox);
  }
