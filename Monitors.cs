@@ -66,9 +66,11 @@ public partial class App {
   var helper=new WindowInteropHelper(w);IntPtr hwnd=helper.EnsureHandle();
   HwndSource.FromHwnd(hwnd).AddHook((IntPtr h,int msg,IntPtr wp,IntPtr lp,ref bool handled)=>{
    if(msg==0x312&&wp.ToInt32()==0x7157){handled=true;var screens=Forms.Screen.AllScreens;int i=Array.IndexOf(screens,Forms.Screen.FromPoint(Forms.Cursor.Position));if(i>=0&&OffMonitors().Contains(i))SetMonitor(i,true);else SignalIsland("TitoGlassOpen",i<0||i==selectedMonitor?"":"m"+i);}
+   if(msg==0x312&&wp.ToInt32()==0x7158){handled=true;CommandBox();}
    return IntPtr.Zero;});
   RegisterHotKey(hwnd,0x7157,0x3|0x4000,0x54); // Ctrl+Alt+T
-  w.Closed+=(s,e)=>UnregisterHotKey(hwnd,0x7157);
+  RegisterHotKey(hwnd,0x7158,0x3|0x4000,0x20); // Ctrl+Alt+Espaço: caixa de comando
+  w.Closed+=(s,e)=>{UnregisterHotKey(hwnd,0x7157);UnregisterHotKey(hwnd,0x7158);};
  }
  static Forms.ToolStripMenuItem MonitorsMenu(){
   var root=new Forms.ToolStripMenuItem("Telas (Ctrl+Alt+T abre onde está o mouse)");
@@ -87,7 +89,7 @@ public partial class App {
    var cap=T(MonitorLabel(i),10.5,"#B9ADB9");cap.Margin=new Thickness(8,4,8,2);box.Children.Add(cap);
    box.Children.Add(ToggleRow("Mostrar Tito",!off.Contains(i),v=>SetMonitor(n,v)));
    box.Children.Add(ToggleRow("Ocultar em tela cheia",!fsOff.Contains(i),v=>SetFullscreenHide(n,v)));}
-  var hint=T("Ctrl+Alt+T abre o Tito na tela do mouse (ou religa, se estiver desligado).",10.5,"#B9ADB9");hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new Thickness(8,4,8,4);box.Children.Add(hint);
+  var hint=T("Ctrl+Alt+T abre o Tito na tela do mouse (ou religa, se estiver desligado).  Ctrl+Alt+Espaço abre a caixa de comando.",10.5,"#B9ADB9");hint.TextWrapping=TextWrapping.Wrap;hint.Margin=new Thickness(8,4,8,4);box.Children.Add(hint);
   return CardBox(box);
  }
 }
