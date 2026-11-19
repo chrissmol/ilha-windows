@@ -37,7 +37,7 @@ public partial class App {
   if(RM(t,@"\b(?:copiei|área de transferência|clipboard)\b").Success)return "q:clip";
   return null;
  }
- static void AddNote(string note){string old=File.Exists(NotesPath())?File.ReadAllText(NotesPath()):"";File.AppendAllText(NotesPath(),(old.Length>0&&!old.EndsWith("\n")?"\n":"")+note+"\n");}
+ static void AddNote(string note){string old=File.Exists(NotesPath(1))?File.ReadAllText(NotesPath(1)):"";File.AppendAllText(NotesPath(1),(old.Length>0&&!old.EndsWith("\n")?"\n":"")+note+"\n");}
  static void AddAgenda(string date,string time,string title){File.AppendAllText(AgendaPath(),date+"|"+time+"|"+title.Replace("|"," ")+"\n");}
  static string RoboBattery(){
   var ps=Forms.SystemInformation.PowerStatus;
@@ -77,7 +77,7 @@ public partial class App {
    case "q:app":return String.IsNullOrEmpty(DesktopContext.ForegroundApp)?"Não sei qual app está em foco.":"App em foco: "+DesktopContext.ForegroundApp+".";
    case "q:timer":return running?"Foco em andamento, faltam "+Format(Math.Ceiling(remaining))+".":"O timer está parado em "+Format(Math.Ceiling(remaining))+".";
    case "q:agenda":return "Hoje: "+RoboAgendaToday()+".";
-   case "q:notes":{string n=File.Exists(NotesPath())?File.ReadAllText(NotesPath()):"";var lines=n.Split('\n').Select(x=>x.Trim()).Where(x=>x.Length>0).ToList();return lines.Count==0?"Você ainda não tem notas.":"Suas últimas notas:\n"+String.Join("\n",lines.Skip(Math.Max(0,lines.Count-5)));}
+   case "q:notes":{string n=File.Exists(NotesPath(1))?File.ReadAllText(NotesPath(1)):"";var lines=n.Split('\n').Select(x=>x.Trim()).Where(x=>x.Length>0).ToList();return lines.Count==0?"Você ainda não tem notas.":"Suas últimas notas:\n"+String.Join("\n",lines.Skip(Math.Max(0,lines.Count-5)));}
    case "q:clip":{string c=clipItems.FirstOrDefault();return c==null?"A área de transferência do Tito está vazia.":"Você copiou por último: "+(c.Length>300?c.Substring(0,300)+"…":c);}
   }}catch(Exception ex){return "Não consegui: "+ex.Message;}
   return null;
