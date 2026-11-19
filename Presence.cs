@@ -90,7 +90,7 @@ public partial class App {
  static void SyncSize(){try{var t=File.Exists(SizeFile())?File.GetLastWriteTimeUtc(SizeFile()):DateTime.MinValue;if(t==sizeStamp)return;sizeStamp=t;int p=t==DateTime.MinValue?0:int.Parse(File.ReadAllText(SizeFile()).Trim());if(p!=sizePct){sizePct=p;SetPose(opened,false);}}catch{}}
  static void SetPose(bool expanded,bool animated){
   if(!SystemParameters.ClientAreaAnimation)animated=false;
-  opened=expanded;int revision=++poseRevision;glass.Width=600;glass.Height=270;glass.HorizontalAlignment=HorizontalAlignment.Center;glass.VerticalAlignment=VerticalAlignment.Top;
+  opened=expanded;ApplyBackdrop();int revision=++poseRevision;glass.Width=600;glass.Height=270;glass.HorizontalAlignment=HorizontalAlignment.Center;glass.VerticalAlignment=VerticalAlignment.Top;
   if(expanded){view.Visibility=Visibility.Visible;nav.Visibility=Visibility.Visible;date.Visibility=Visibility.Visible;time.Visibility=Visibility.Visible;compact.Visibility=Visibility.Collapsed;}
   double width=expanded?600:compactWide?compactWidth:128,height=expanded?270:34;
   var area=MonitorArea();ApplyScale(area);w.Left=area.Left+(area.Width-w.Width)/2;w.Top=area.Top;

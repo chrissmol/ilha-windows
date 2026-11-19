@@ -40,8 +40,12 @@ public sealed class MascotEyes : FrameworkElement {
    case "worry":f.Left=11;f.Right=11;f.Tilt=16;f.R=255;f.G=176;f.B=64;break;
    case "dizzy":f.Spiral=1;f.R=190;f.G=120;f.B=255;break;
   }
+  Nullable<Color> o=mood=="idle"?IdleTint:mood=="focus"?FocusTint:mood=="thinking"?ThinkTint:null;if(o.HasValue){f.R=o.Value.R;f.G=o.Value.G;f.B=o.Value.B;}
   return f;
  }
+ // Theme colors for the idle, focus and thinking eyes (null = the built-in colors).
+ public static Nullable<Color> IdleTint,FocusTint,ThinkTint;
+ public void Retint(){from=to=Pose(mood);InvalidateVisual();}
  Face from=Pose("idle"),to=Pose("idle");string mood="idle";
  static double Mix(double a,double b,double t){return a+(b-a)*t;}
  Face Current(){double t=Blend;return new Face{Left=Mix(from.Left,to.Left,t),Right=Mix(from.Right,to.Right,t),Width=Mix(from.Width,to.Width,t),SmileL=Mix(from.SmileL,to.SmileL,t),SmileR=Mix(from.SmileR,to.SmileR,t),R=Mix(from.R,to.R,t),G=Mix(from.G,to.G,t),B=Mix(from.B,to.B,t),Heart=Mix(from.Heart,to.Heart,t),Spiral=Mix(from.Spiral,to.Spiral,t),Tilt=Mix(from.Tilt,to.Tilt,t),LookX=Mix(from.LookX,to.LookX,t),LookY=Mix(from.LookY,to.LookY,t),Glint=Mix(from.Glint,to.Glint,t)};}
