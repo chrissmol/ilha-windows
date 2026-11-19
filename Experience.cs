@@ -20,6 +20,7 @@ public partial class App {
   if(!uiTest){outputMeter=new DesktopAudio.PeakMonitor();waveTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(50)};waveTimer.Tick+=(s,e)=>{bool active=!contextHidden&&(page=="music"||(!opened&&media.playing));outputMeter.Enabled=active;bool visible=page=="music"||(!opened&&media.playing);mascot.MediaMode=visible;mascot.ToolTip=visible?(outputMeter.Available?"Nível real da saída padrão · mistura de todos os aplicativos":"Medição de áudio indisponível · "+outputMeter.Error):"Tito";if(headerMascot!=null)headerMascot.MediaMode=page=="music";Color waves=glassTint.HasValue?glassTint.Value:Color.FromRgb(83,190,255);mascot.WaveColor=waves;if(headerMascot!=null)headerMascot.WaveColor=waves;double peak=active&&outputMeter.Available?outputMeter.Level:0;bool busy=active||waveWasActive||mascot.MediaBlend>.001||(headerMascot!=null&&headerMascot.MediaBlend>.001);if(busy){mascot.AudioPeak(peak);if(headerMascot!=null)headerMascot.AudioPeak(peak);}waveWasActive=active;waveTimer.Interval=TimeSpan.FromMilliseconds(busy?50:250);};waveTimer.Start();w.Closed+=(s,e)=>{waveTimer.Stop();outputMeter.Dispose();};}
   w.PreviewMouseMove+=(s,e)=>lastMascotInteraction=DateTime.UtcNow;w.PreviewKeyDown+=(s,e)=>lastMascotInteraction=DateTime.UtcNow;
   if(!secondary)try{File.Delete(SharedPath());Directory.Delete(Path.Combine(dataDir,"shelf"),true);}catch{}
+  if(!secondary)LoadChat();
   if(!secondary)selectedMonitor=Math.Max(0,Array.FindIndex(System.Windows.Forms.Screen.AllScreens,x=>x.Primary));
   try{string path=Path.Combine(dataDir,"experience.json");if(File.Exists(path)){var prefs=json.Deserialize<Dictionary<string,object>>(File.ReadAllText(path));if(prefs.ContainsKey("quiet"))doNotDisturb=Convert.ToBoolean(prefs["quiet"]);}string source=Path.Combine(dataDir,"media-source.txt");if(File.Exists(source))selectedSource=File.ReadAllText(source).Trim();}catch{}
   w.Closed+=(s,e)=>{if(!secondary)File.WriteAllText(Path.Combine(dataDir,"experience.json"),json.Serialize(new{monitor=selectedMonitor,quiet=doNotDisturb}));};
@@ -54,6 +55,9 @@ public partial class App {
  static string selectedSource="";static string chatDraft="";
  static void SelectSource(string source){selectedSource=source;File.WriteAllText(Path.Combine(dataDir,"media-source.txt"),source);}
  static string syncSnap="";static DateTime syncStamp=DateTime.MinValue;
+ // Chat history survives restarts (shared.json is reset at startup, so it lives in its own file).
+ static string ChatPath(){return Path.Combine(dataDir,"chat.json");}
+ static void LoadChat(){try{if(!File.Exists(ChatPath()))return;var list=new List<Dictionary<string,string>>();foreach(var o in (System.Collections.IEnumerable)json.Deserialize<List<object>>(File.ReadAllText(ChatPath()))){var m=(Dictionary<string,object>)o;list.Add(new Dictionary<string,string>{{"role",""+m["role"]},{"content",""+m["content"]}});}conversation=list.Count>100?list.GetRange(list.Count-100,100):list;}catch{}}
  static string SharedPath(){return Path.Combine(dataDir,"shared.json");}
  static string Snap(){return running+"|"+(running?end.Ticks:(long)Math.Round(remaining))+"|"+doNotDisturb+"|"+conversation.Count+"|"+(conversation.Count>0?conversation[conversation.Count-1]["content"].GetHashCode():0);}
  static void SyncTick(){
@@ -66,12 +70,12 @@ public partial class App {
     conversation=list;syncStamp=stamp;syncSnap=Snap();
     if((On("chat")&&list.Count!=count)||(page=="focus"&&was!=running))Render();
    }else if(Snap()!=syncSnap){
-    File.WriteAllText(path,json.Serialize(new Dictionary<string,object>{{"running",running},{"remaining",remaining},{"end",end.Ticks},{"dnd",doNotDisturb},{"conversation",conversation}}));syncStamp=File.GetLastWriteTimeUtc(path);syncSnap=Snap();
+    File.WriteAllText(path,json.Serialize(new Dictionary<string,object>{{"running",running},{"remaining",remaining},{"end",end.Ticks},{"dnd",doNotDisturb},{"conversation",conversation}}));try{File.WriteAllText(ChatPath(),json.Serialize(conversation));}catch{}syncStamp=File.GetLastWriteTimeUtc(path);syncSnap=Snap();
    }
   }catch{}
  }
  static void ExperienceTick(){
-  SyncTick();CpuTick();ClipboardTick();PainelPoll();AgendaReminderTick();
+  SyncTick();FocusTick();CpuTick();ClipboardTick();PainelPoll();AgendaReminderTick();
   if(focusWasRunning&&!running&&remaining<=0)excitedUntil=DateTime.UtcNow.AddSeconds(5);focusWasRunning=running;
   var expired=shelf.Where(x=>DateTime.UtcNow-x.Added>TimeSpan.FromHours(1)).ToArray();foreach(var x in expired)Forget(x);bool removed=expired.Length>0;if(removed&&page=="shelf")Switch("shelf");
   if(mediaWasPlaying&&!media.playing)celebrateUntil=DateTime.UtcNow.AddSeconds(1);mediaWasPlaying=media.playing;
