@@ -45,11 +45,14 @@ public partial class App {
   var header=new DockPanel{Margin=new Thickness(0,0,0,6)};if(action!=null){DockPanel.SetDock(action,Dock.Right);header.Children.Add(action);}var heading=T(title,19,PageHex(page));heading.FontWeight=FontWeights.SemiBold;header.Children.Add(heading);root.Children.Add(header);
   scroll=new ScrollViewer{VerticalScrollBarVisibility=ScrollBarVisibility.Auto};Grid.SetRow(scroll,1);root.Children.Add(scroll);var rows=Stack();scroll.Content=rows;return rows;
  }
+ static string notesPending;static DispatcherTimer notesSave;
+ // Grava a nota 600 ms depois da última tecla (e ao sair da aba/fechar), não a cada tecla.
+ static void FlushNotes(){if(notesSave!=null)notesSave.Stop();if(notesPending==null)return;try{File.WriteAllText(NotesPath(),notesPending);notesPending=null;}catch{}}
  static void Notes(){
-  ScrollViewer sc;var rows=Panel("Notas",out sc);
+  FlushNotes();ScrollViewer sc;var rows=Panel("Notas",out sc);
   string saved="";try{if(File.Exists(NotesPath()))saved=File.ReadAllText(NotesPath());}catch{}
   notesBox=new TextBox{Text=saved,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Background=B("#18FFFFFF"),Foreground=B("#FFF8F6"),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(10),FontSize=13,MinHeight=130,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
-  notesBox.TextChanged+=(s,e)=>{typingUntil=DateTime.UtcNow.AddSeconds(3);try{File.WriteAllText(NotesPath(),notesBox.Text);}catch{}};rows.Children.Add(notesBox);
+  notesBox.TextChanged+=(s,e)=>{typingUntil=DateTime.UtcNow.AddSeconds(3);notesPending=notesBox.Text;if(notesSave==null){notesSave=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(600)};notesSave.Tick+=(a,b)=>FlushNotes();w.Closed+=(a,b)=>FlushNotes();}notesSave.Stop();notesSave.Start();};rows.Children.Add(notesBox);
  }
  static void ClipboardPage(){
   ScrollViewer sc;var rows=Panel("Área de transferência",out sc,Btn("Limpar",()=>{clipItems.Clear();Switch("clipboard");}));
