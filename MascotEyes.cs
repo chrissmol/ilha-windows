@@ -24,7 +24,7 @@ public sealed class MascotEyes : FrameworkElement {
  public MascotEyes(){RenderTransform=tilt;RenderTransformOrigin=new Point(.5,.5);}
  public bool MediaMode {get{return mediaMode;}set{if(mediaMode==value)return;mediaMode=value;if(SystemParameters.ClientAreaAnimation)BeginAnimation(MediaBlendProperty,new DoubleAnimation(value?1:0,TimeSpan.FromMilliseconds(280)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}});else{BeginAnimation(MediaBlendProperty,null);MediaBlend=value?1:0;}}}
  public void AudioPeak(double value){if(Double.IsNaN(value)||Double.IsInfinity(value))value=0;value=Math.Max(0,Math.Min(1,value));agc=Math.Max(value,agc*.997);value=Math.Min(1,value/Math.Max(.18,agc));double blend=WaveStep;for(int i=0;i<7;i++)waveFrom[i]=Mix(waveFrom[i],waveTo[i],blend);envelope+=(value-envelope)*(value>envelope?.5:.16);for(int i=0;i<6;i++)peaks[i]=peaks[i+1];peaks[6]=envelope;for(int i=0;i<7;i++)waveTo[i]=peaks[i]*.6+peaks[Math.Max(0,i-1)]*.2+peaks[Math.Min(6,i+1)]*.2;BeginAnimation(WaveStepProperty,null);WaveStep=0;if(mediaMode&&SystemParameters.ClientAreaAnimation)BeginAnimation(WaveStepProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(95)));else WaveStep=1;InvalidateVisual();}
- struct Face {public double Left,Right,Width,SmileL,SmileR,R,G,B,Heart,Spiral,Tilt,LookX,LookY;}
+ struct Face {public double Left,Right,Width,SmileL,SmileR,R,G,B,Heart,Spiral,Tilt,LookX,LookY,Glint;}
  static Face Pose(string mood){
   var f=new Face{Left=11,Right=10.5,Width=6,R=255,G=255,B=255};
   switch(mood){
@@ -33,7 +33,7 @@ public sealed class MascotEyes : FrameworkElement {
    case "curious":f.Left=13;f.Right=9;f.R=64;f.G=255;f.B=224;break;
    case "surprised":f.Left=14;f.Right=14;f.Width=7;f.R=255;f.G=138;f.B=76;break;
    case "happy":f.Left=4;f.Right=4;f.SmileL=1;f.SmileR=1;f.R=255;f.G=214;f.B=64;break;
-   case "excited":f.Left=15;f.Right=15;f.Width=7;f.R=255;f.G=196;f.B=0;break;
+   case "excited":f.Left=15;f.Right=15;f.Width=7;f.Glint=1;f.R=255;f.G=196;f.B=0;break;
    case "love":f.Heart=1;f.R=255;f.G=92;f.B=138;break;
    case "wink":f.Right=4;f.SmileR=1;f.R=255;f.G=236;f.B=170;break;
    case "thinking":f.Left=9;f.Right=9;f.LookX=2.5;f.LookY=-3;f.R=90;f.G=220;f.B=255;break;
@@ -44,11 +44,11 @@ public sealed class MascotEyes : FrameworkElement {
  }
  Face from=Pose("idle"),to=Pose("idle");string mood="idle";
  static double Mix(double a,double b,double t){return a+(b-a)*t;}
- Face Current(){double t=Blend;return new Face{Left=Mix(from.Left,to.Left,t),Right=Mix(from.Right,to.Right,t),Width=Mix(from.Width,to.Width,t),SmileL=Mix(from.SmileL,to.SmileL,t),SmileR=Mix(from.SmileR,to.SmileR,t),R=Mix(from.R,to.R,t),G=Mix(from.G,to.G,t),B=Mix(from.B,to.B,t),Heart=Mix(from.Heart,to.Heart,t),Spiral=Mix(from.Spiral,to.Spiral,t),Tilt=Mix(from.Tilt,to.Tilt,t),LookX=Mix(from.LookX,to.LookX,t),LookY=Mix(from.LookY,to.LookY,t)};}
+ Face Current(){double t=Blend;return new Face{Left=Mix(from.Left,to.Left,t),Right=Mix(from.Right,to.Right,t),Width=Mix(from.Width,to.Width,t),SmileL=Mix(from.SmileL,to.SmileL,t),SmileR=Mix(from.SmileR,to.SmileR,t),R=Mix(from.R,to.R,t),G=Mix(from.G,to.G,t),B=Mix(from.B,to.B,t),Heart=Mix(from.Heart,to.Heart,t),Spiral=Mix(from.Spiral,to.Spiral,t),Tilt=Mix(from.Tilt,to.Tilt,t),LookX=Mix(from.LookX,to.LookX,t),LookY=Mix(from.LookY,to.LookY,t),Glint=Mix(from.Glint,to.Glint,t)};}
  public string Mood {get{return mood;}set{if(mood==value)return;from=Current();to=Pose(value);mood=value;BeginAnimation(BlendProperty,null);Blend=0;if(SystemParameters.ClientAreaAnimation)BeginAnimation(BlendProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(230)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}});else Blend=1;
    BeginAnimation(PhaseProperty,null);Phase=0;
    if(SystemParameters.ClientAreaAnimation){
-    if(value=="thinking"||value=="sleepy"||value=="dizzy"){var steps=new DoubleAnimationUsingKeyFrames{Duration=TimeSpan.FromMilliseconds(1200),RepeatBehavior=RepeatBehavior.Forever};for(int i=0;i<8;i++)steps.KeyFrames.Add(new DiscreteDoubleKeyFrame(i,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(i*150))));BeginAnimation(PhaseProperty,steps);}
+    if(value=="thinking"||value=="sleepy"||value=="dizzy"||value=="excited"){var steps=new DoubleAnimationUsingKeyFrames{Duration=TimeSpan.FromMilliseconds(1200),RepeatBehavior=RepeatBehavior.Forever};for(int i=0;i<8;i++)steps.KeyFrames.Add(new DiscreteDoubleKeyFrame(i,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(i*150))));BeginAnimation(PhaseProperty,steps);}
     if(value=="happy"||value=="love"||value=="surprised")Hop(1);else if(value=="excited")Hop(2);else if(value=="curious"||value=="dizzy")Wiggle();
    }}}
  public void Hop(int times){
@@ -63,12 +63,13 @@ public sealed class MascotEyes : FrameworkElement {
   for(int i=0;i<angles.Length;i++)a.KeyFrames.Add(new LinearDoubleKeyFrame(angles[i],KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(i*96))));
   tilt.BeginAnimation(RotateTransform.AngleProperty,a);
  }
- public void BlinkOnce(){
+ public void BlinkOnce(bool twice=false){
   if(!SystemParameters.ClientAreaAnimation)return;
-  var animation=new DoubleAnimationUsingKeyFrames {Duration=TimeSpan.FromMilliseconds(170),FillBehavior=FillBehavior.Stop};
+  var animation=new DoubleAnimationUsingKeyFrames {Duration=TimeSpan.FromMilliseconds(twice?400:170),FillBehavior=FillBehavior.Stop};
   animation.KeyFrames.Add(new LinearDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.Zero)));
   animation.KeyFrames.Add(new LinearDoubleKeyFrame(.12,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(75))));
   animation.KeyFrames.Add(new LinearDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(170))));
+  if(twice){animation.KeyFrames.Add(new LinearDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(230))));animation.KeyFrames.Add(new LinearDoubleKeyFrame(.12,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(300))));animation.KeyFrames.Add(new LinearDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(400))));}
   BeginAnimation(BlinkProperty,animation);
  }
  protected override void OnRender(DrawingContext dc){
@@ -89,6 +90,7 @@ public sealed class MascotEyes : FrameworkElement {
    double h=Math.Max(1,height*Blink*(1+.18*lift)),w=f.Width*(1+(1-Blink)*.35);dc.PushOpacity(plain);
    if(f.Tilt>.01)dc.PushTransform(new RotateTransform(f.Tilt*side,x,y));
    dc.DrawRoundedRectangle(brush,null,new Rect(x-w/2,y-h/2,w,h),w/2,w/2);
+   if(f.Glint>.01){dc.PushOpacity(f.Glint*(((int)Phase)%2==0?1:.35));dc.DrawEllipse(Brushes.White,null,new Point(x-w*.15,y-h*.22),1.6,1.6);dc.Pop();} // brilho nos olhos
    if(f.Tilt>.01)dc.Pop();dc.Pop();
   }
   double arc=smile*(1-f.Heart)*(1-f.Spiral);

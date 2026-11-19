@@ -71,11 +71,12 @@ public partial class App {
   }catch{}
  }
  static void ExperienceTick(){
-  SyncTick();ClipboardTick();PainelPoll();AgendaReminderTick();
+  SyncTick();CpuTick();ClipboardTick();PainelPoll();AgendaReminderTick();
   if(focusWasRunning&&!running&&remaining<=0)excitedUntil=DateTime.UtcNow.AddSeconds(5);focusWasRunning=running;
   var expired=shelf.Where(x=>DateTime.UtcNow-x.Added>TimeSpan.FromHours(1)).ToArray();foreach(var x in expired)Forget(x);bool removed=expired.Length>0;if(removed&&page=="shelf")Switch("shelf");
   if(mediaWasPlaying&&!media.playing)celebrateUntil=DateTime.UtcNow.AddSeconds(1);mediaWasPlaying=media.playing;
-  var now=DateTime.UtcNow;string mood=now<dizzyUntil?"dizzy":dropHover||now<curiousUntil?"curious":now<surprisedUntil?"surprised":now<excitedUntil?"excited":now<loveUntil?"love":now<celebrateUntil?"happy":chatBusy||now<agentBusyUntil?"thinking":batteryLow||painelHigh?"worry":running||now<typingUntil?"focus":media.playing?"music":now<winkUntil?"wink":DateTime.UtcNow-lastMascotInteraction>TimeSpan.FromSeconds(60)&&!keepAwake?"sleepy":"idle";
+  var now=DateTime.UtcNow;if(chatWasBusy&&!chatBusy)chatDoneUntil=now.AddSeconds(1.5);chatWasBusy=chatBusy;string mood=now<dizzyUntil?"dizzy":dropHover||now<curiousUntil?"curious":now<surprisedUntil?"surprised":now<excitedUntil?"excited":now<loveUntil?"love":now<celebrateUntil||now<welcomeUntil||now<chatDoneUntil?"happy":chatBusy||now<agentBusyUntil?"thinking":batteryLow||painelHigh||cpuHigh?"worry":running||now<typingUntil?"focus":media.playing?"music":now<winkUntil?"wink":DateTime.UtcNow-lastMascotInteraction>TimeSpan.FromSeconds(60)&&!keepAwake?"sleepy":"idle";
+  if(lastMood=="sleepy"&&mood!="sleepy"&&mood!="dizzy"){surprisedUntil=now.AddMilliseconds(500);mood="surprised";} // acordou: abre os olhos com susto
   if(mood=="excited"&&lastMood!="excited")Confetti();lastMood=mood;
   if(mascot!=null){mascot.Mood=mood;mascot.InvalidateVisual();}if(headerMascot!=null)headerMascot.Mood=mood;
   if(compactStatus!=null){string text=running?Format(remaining):media.playing&&!String.IsNullOrEmpty(media.title)?media.title:"";string battColor=null,battHex;string battText=BatteryText(out battHex);if(text.Length==0&&battText!=null){text=battText;battColor=battHex;}compactStatus.MaxWidth=130;compactStatus.TextTrimming=TextTrimming.CharacterEllipsis;compactStatus.Text=text;compactStatus.Foreground=running?B("#BC83FF"):battColor!=null?B(battColor):Brushes.White;compactStatus.Visibility=text.Length>0?Visibility.Visible:Visibility.Collapsed;bool wide=text.Length>0;double cw=running||battColor!=null?176:230;if(compactWide!=wide||(wide&&compactWidth!=cw)){compactWide=wide;compactWidth=cw;if(!opened)SetPose(false,true);}
