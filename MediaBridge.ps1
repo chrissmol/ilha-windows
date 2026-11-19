@@ -78,6 +78,6 @@ try {
    }
   }catch{Publish @{available=$false;error=$_.Exception.GetBaseException().Message;title='Mídia indisponível';artist='O Windows não forneceu os dados da sessão.';playing=$false;position=0;duration=0;cover=''}}
   if($Once){break}
-  Start-Sleep -Milliseconds 800
+  Start-Sleep -Milliseconds ($(if($null -eq $session){2500}else{800}))
  }while($OwnerPid -gt 0 -and (Get-Process -Id $OwnerPid -ErrorAction SilentlyContinue))
 }catch{Publish @{available=$false;error=$_.Exception.GetBaseException().Message;title='Mídia indisponível';artist='O serviço de mídia do Windows não está disponível.';playing=$false;position=0;duration=0;cover=''}}

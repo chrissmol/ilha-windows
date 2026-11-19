@@ -74,12 +74,18 @@ public partial class App {
  static HashSet<string> hiddenApps=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
  static DateTime nextBlink=DateTime.UtcNow.AddSeconds(3);static Random random=new Random();
  static System.Threading.EventWaitHandle openSignal,restartSignal;
+ // Dashboard size: 0 = automatic (monitor width in DIPs vs 1920, so a 4K at 100% gets a bigger Tito), else a fixed percent from Settings.
+ // The percent lives in size.txt; every island rereads it when it changes, like the monitor switches.
+ static int sizePct;static DateTime sizeStamp;
+ static string SizeFile(){return System.IO.Path.Combine(dataDir,"size.txt");}
+ static void ApplyScale(Rect area){double s=sizePct>0?sizePct/100.0:Math.Round(Math.Max(.85,Math.Min(2,area.Width/1920))*20)/20;w.Width=640*s;w.Height=300*s;}
+ static void SyncSize(){try{var t=File.Exists(SizeFile())?File.GetLastWriteTimeUtc(SizeFile()):DateTime.MinValue;if(t==sizeStamp)return;sizeStamp=t;int p=t==DateTime.MinValue?0:int.Parse(File.ReadAllText(SizeFile()).Trim());if(p!=sizePct){sizePct=p;SetPose(opened,false);}}catch{}}
  static void SetPose(bool expanded,bool animated){
   if(!SystemParameters.ClientAreaAnimation)animated=false;
   opened=expanded;int revision=++poseRevision;glass.Width=600;glass.Height=270;glass.HorizontalAlignment=HorizontalAlignment.Center;glass.VerticalAlignment=VerticalAlignment.Top;
   if(expanded){view.Visibility=Visibility.Visible;nav.Visibility=Visibility.Visible;date.Visibility=Visibility.Visible;time.Visibility=Visibility.Visible;compact.Visibility=Visibility.Collapsed;}
   double width=expanded?600:compactWide?compactWidth:128,height=expanded?270:34;
-  var area=MonitorArea();w.Left=area.Left+(area.Width-640)/2;w.Top=area.Top;
+  var area=MonitorArea();ApplyScale(area);w.Left=area.Left+(area.Width-w.Width)/2;w.Top=area.Top;
   if(!expanded){restingShell.Width=width;restingShell.Height=height;}
   glass.IsHitTestVisible=expanded;restingShell.IsHitTestVisible=!expanded;
   if(animated){
@@ -114,14 +120,18 @@ public partial class App {
   double k=1-Math.Exp(-dt/(target.X!=0||target.Y!=0?.07:.24));var next=new Point(gazeNow.X+(target.X-gazeNow.X)*k,gazeNow.Y+(target.Y-gazeNow.Y)*k);
   if((next-gazeNow).Length>.004){gazeNow=next;m.GazeX=next.X;m.GazeY=next.Y;m.InvalidateVisual();}
  }
+ static DateTime hoverSince=DateTime.MinValue;static readonly TimeSpan HoverDelay=TimeSpan.FromMilliseconds(350);
  static void HoverTick(){
-  if(uiTest||contextHidden||!w.IsVisible)return;
+  if(uiTest||contextHidden||!w.IsVisible){if(hoverTimer!=null)hoverTimer.Interval=TimeSpan.FromMilliseconds(250);return;}
   GazeTick();
   double tw=opened?600:(compactWide?compactWidth:128),th=opened?270:34;bool inside=DesktopContext.CursorInside(w,tw,th,opened?2:0);
-  if(opened){if(!inside&&System.Windows.Input.Mouse.Captured==null&&!dropHover)Expand(false);}else if(inside&&!doNotDisturb)Expand(true);
+  if(opened){if(!inside&&System.Windows.Input.Mouse.Captured==null&&!dropHover)Expand(false);}else if(!inside)hoverSince=DateTime.MinValue;else if(!doNotDisturb){if(hoverSince==DateTime.MinValue)hoverSince=DateTime.UtcNow;else if(DateTime.UtcNow-hoverSince>=HoverDelay){hoverSince=DateTime.MinValue;Expand(true);}} // abre só depois de um instante com o mouse em cima
+  // 33 ms só quando há o que animar; em repouso 100 ms bastam para detectar o mouse.
+  hoverTimer.Interval=TimeSpan.FromMilliseconds(opened||inside||gazeNow.X!=0||gazeNow.Y!=0||DateTime.UtcNow<gazeUntil?33:100);
  }
  static void PresenceTick(){
   SyncFullscreenHide();
+  SyncSize();
   SyncMonitors(false);
   if(secondary&&ownerProc!=null&&ownerProc.HasExited){w.Close();return;}
   if(restartSignal!=null&&restartSignal.WaitOne(0)){w.Close();return;}
