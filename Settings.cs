@@ -50,7 +50,7 @@ public partial class App {
   modelStatus=T(MotorStatusText(),10.5,Theme.Soft);modelStatus.TextWrapping=TextWrapping.Wrap;modelStatus.Margin=new Thickness(8,7,8,4);robo.Children.Add(modelStatus);DetectModels();right.Children.Add(CardBox(robo));
   var media_=Stack();var status=T("Mídia · "+(media.available?"conectada ao Windows":String.IsNullOrEmpty(media.error)?"aguardando player":media.error.Trim()),10.5,Theme.Soft);status.TextWrapping=TextWrapping.Wrap;status.Margin=new Thickness(8,5,8,3);media_.Children.Add(status);
   media_.Children.Add(LinkRow("Voltar ao player Windows",()=>{useSystem=true;player.Pause();playing=false;Switch("music");}));right.Children.Add(CardBox(media_));
-  right.Children.Add(SizeCard());grid.Children.Add(left);grid.Children.Add(right);
+  right.Children.Add(ThemeCard());right.Children.Add(SizeCard());grid.Children.Add(left);grid.Children.Add(right);
  }
 }
 }
