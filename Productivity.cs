@@ -26,8 +26,8 @@ public partial class App {
   if((ps.BatteryChargeStatus&(System.Windows.Forms.BatteryChargeStatus.NoSystemBattery|System.Windows.Forms.BatteryChargeStatus.Unknown))!=0)return null;
   int pct=(int)Math.Round(ps.BatteryLifePercent*100);bool charging=ps.PowerLineStatus==System.Windows.Forms.PowerLineStatus.Online;
   batteryLow=!charging&&pct<=20;if(batteryKnown&&charging&&!wasCharging)loveUntil=DateTime.UtcNow.AddSeconds(2.5);batteryKnown=true;wasCharging=charging;
-  if(charging&&pct<100){color="#30D158";return "⚡ "+pct+"%";}
-  if(!charging&&pct<=30){color=pct<=20?"#FF453A":"#FFB000";return pct+"%";}
+  if(charging&&pct<100){color=Theme.Ok;return "⚡ "+pct+"%";}
+  if(!charging&&pct<=30){color=pct<=20?Theme.Bad:"#FFB000";return pct+"%";}
   return null;
  }
  static string NotesPath(){return Path.Combine(dataDir,"notes.txt");}
@@ -52,7 +52,7 @@ public partial class App {
  static void Notes(){
   FlushNotes();ScrollViewer sc;var rows=Panel("Notas",out sc);
   string saved="";try{if(File.Exists(NotesPath()))saved=File.ReadAllText(NotesPath());}catch{}
-  notesBox=new TextBox{Text=saved,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Background=B("#18FFFFFF"),Foreground=B("#FFF8F6"),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(10),FontSize=13,MinHeight=130,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
+  notesBox=new TextBox{Text=saved,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Background=B("#18FFFFFF"),Foreground=B(Theme.Text),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(10),FontSize=13,MinHeight=130,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
   notesBox.TextChanged+=(s,e)=>{typingUntil=DateTime.UtcNow.AddSeconds(3);notesPending=notesBox.Text;if(notesSave==null){notesSave=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(600)};notesSave.Tick+=(a,b)=>FlushNotes();w.Closed+=(a,b)=>FlushNotes();}notesSave.Stop();notesSave.Start();};rows.Children.Add(notesBox);
  }
  static void ClipboardPage(){
@@ -87,7 +87,7 @@ public partial class App {
  }
  static void Agenda(){
   ScrollViewer sc;var rows=Panel("Agenda",out sc);
-  var add=new TextBox{Background=B("#18FFFFFF"),Foreground=B("#FFF8F6"),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(8,5,8,5),FontSize=12,ToolTip="14:30 Reunião  ·  amanhã 9h Dentista  ·  25/11 18h30 Jantar  ·  2026-11-20 09:00 Médico",Margin=new Thickness(0,0,0,6)};
+  var add=new TextBox{Background=B("#18FFFFFF"),Foreground=B(Theme.Text),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(8,5,8,5),FontSize=12,ToolTip="14:30 Reunião  ·  amanhã 9h Dentista  ·  25/11 18h30 Jantar  ·  2026-11-20 09:00 Médico",Margin=new Thickness(0,0,0,6)};
   add.KeyDown+=(s,e)=>{if(e.Key!=System.Windows.Input.Key.Enter||String.IsNullOrWhiteSpace(add.Text))return;
    string date,time,title;if(!ParseAgenda(add.Text,DateTime.Now,out date,out time,out title)){agendaError="Não entendi. Tente: 14:30 Reunião · amanhã 9h Dentista · 25/11 18h30 Jantar";Switch("agenda");return;}
    agendaError="";try{File.AppendAllText(AgendaPath(),date+"|"+time+"|"+title.Replace("|"," ")+"\n");}catch{agendaError="Não consegui salvar a agenda.";}celebrateUntil=DateTime.UtcNow.AddSeconds(2);Switch("agenda");};
@@ -96,7 +96,7 @@ public partial class App {
   string today=DateTime.Now.ToString("yyyy-MM-dd");var upcoming=AgendaEntries().Where(p=>String.CompareOrdinal(p[0],today)>=0).Take(12).ToList();
   if(upcoming.Count==0)rows.Children.Add(T("Nada marcado. Digite “14:30 Reunião” e Enter.",13,"#BDBDC5"));
   foreach(var p in upcoming){var row=Stack(Orientation.Horizontal);string when=p[0]==today?p[1]:DateTime.ParseExact(p[0],"yyyy-MM-dd",CultureInfo.InvariantCulture).ToString("dd/MM",CultureInfo.InvariantCulture)+" "+p[1];
-   var t=T(when,12,p[0]==today?"#FFB36B":"#AFA9B4");t.Width=84;row.Children.Add(t);row.Children.Add(T(p[2],13));
+   var t=T(when,12,p[0]==today?"#FFB36B":Theme.Muted);t.Width=84;row.Children.Add(t);row.Children.Add(T(p[2],13));
    var entry=p;var done=Btn("✕",()=>{try{File.WriteAllLines(AgendaPath(),AgendaEntries().Where(x=>!(x[0]==entry[0]&&x[1]==entry[1]&&x[2]==entry[2])).Select(x=>String.Join("|",x)).ToArray());}catch{}Switch("agenda");},"Remover");done.Padding=new Thickness(6,2,6,2);row.Children.Add(done);row.Margin=new Thickness(0,3,0,3);rows.Children.Add(row);}
  }
 }

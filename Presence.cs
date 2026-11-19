@@ -74,12 +74,18 @@ public partial class App {
  static HashSet<string> hiddenApps=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
  static DateTime nextBlink=DateTime.UtcNow.AddSeconds(3);static Random random=new Random();
  static System.Threading.EventWaitHandle openSignal,restartSignal;
+ // Dashboard size: 0 = automatic (monitor width in DIPs vs 1920, so a 4K at 100% gets a bigger Tito), else a fixed percent from Settings.
+ // The percent lives in size.txt; every island rereads it when it changes, like the monitor switches.
+ static int sizePct;static DateTime sizeStamp;
+ static string SizeFile(){return System.IO.Path.Combine(dataDir,"size.txt");}
+ static void ApplyScale(Rect area){double s=sizePct>0?sizePct/100.0:Math.Round(Math.Max(.85,Math.Min(2,area.Width/1920))*20)/20;w.Width=640*s;w.Height=300*s;}
+ static void SyncSize(){try{var t=File.Exists(SizeFile())?File.GetLastWriteTimeUtc(SizeFile()):DateTime.MinValue;if(t==sizeStamp)return;sizeStamp=t;int p=t==DateTime.MinValue?0:int.Parse(File.ReadAllText(SizeFile()).Trim());if(p!=sizePct){sizePct=p;SetPose(opened,false);}}catch{}}
  static void SetPose(bool expanded,bool animated){
   if(!SystemParameters.ClientAreaAnimation)animated=false;
   opened=expanded;int revision=++poseRevision;glass.Width=600;glass.Height=270;glass.HorizontalAlignment=HorizontalAlignment.Center;glass.VerticalAlignment=VerticalAlignment.Top;
   if(expanded){view.Visibility=Visibility.Visible;nav.Visibility=Visibility.Visible;date.Visibility=Visibility.Visible;time.Visibility=Visibility.Visible;compact.Visibility=Visibility.Collapsed;}
   double width=expanded?600:compactWide?compactWidth:128,height=expanded?270:34;
-  var area=MonitorArea();w.Left=area.Left+(area.Width-640)/2;w.Top=area.Top;
+  var area=MonitorArea();ApplyScale(area);w.Left=area.Left+(area.Width-w.Width)/2;w.Top=area.Top;
   if(!expanded){restingShell.Width=width;restingShell.Height=height;}
   glass.IsHitTestVisible=expanded;restingShell.IsHitTestVisible=!expanded;
   if(animated){
@@ -124,6 +130,7 @@ public partial class App {
  }
  static void PresenceTick(){
   SyncFullscreenHide();
+  SyncSize();
   SyncMonitors(false);
   if(secondary&&ownerProc!=null&&ownerProc.HasExited){w.Close();return;}
   if(restartSignal!=null&&restartSignal.WaitOne(0)){w.Close();return;}

@@ -25,7 +25,7 @@ public partial class App {
   bounce.KeyFrames.Add(new LinearDoubleKeyFrame(.8,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(90))));bounce.KeyFrames.Add(new LinearDoubleKeyFrame(1.22,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(230))));bounce.KeyFrames.Add(new LinearDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(380))));
   scale.BeginAnimation(ScaleTransform.ScaleXProperty,bounce);scale.BeginAnimation(ScaleTransform.ScaleYProperty,bounce);
  }
- static readonly string[] confettiColors={"#FF375F","#FF9F0A","#FFD60A","#30D158","#64D2FF","#BF5AF2"};
+ static readonly string[] confettiColors={"#FF375F",Theme.Warn,"#FFD60A",Theme.Ok,Theme.Info,"#BF5AF2"};
  static void Confetti(){
   if(confettiLayer==null||!SystemParameters.ClientAreaAnimation)return;var random=new Random();
   for(int i=0;i<30;i++){
