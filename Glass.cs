@@ -40,7 +40,7 @@ public partial class App {
   view.Children.Clear();nav.Children.Clear();
   if(page=="focus")Focus();else if(page=="music")SystemMusic();else if(page=="ia")IAPage();else if(page=="shelf")Shelf();else if(page=="audio")AudioPanel();else if(page=="settings")Settings();else if(page=="notes")Notes();else if(page=="clipboard")ClipboardPage();else if(page=="agenda")Agenda();else Dashboard();
   var links=new[]{new[]{"home","home","HOME"},new[]{"music","music","MÍDIA"},new[]{"focus","focus","FOCUS"},new[]{"ia","ia","IA"},new[]{"agenda","agenda","AGENDA"},new[]{"notes","notes","NOTAS"},new[]{"clipboard","clipboard","COLAR"}};
-  foreach(var link in links){string target=link[1];var b=Btn("",()=>{if(target=="music"){useSystem=true;player.Pause();playing=false;}Switch(target);},link[2]);b.Content=NavIcon(link[0],page==target?link[2]:null);if(page==target){b.Background=B("#22FFFFFF");b.Foreground=B("#FFFFFF");activeNav=b;}nav.Children.Add(b);}
+  foreach(var link in links){string target=link[1];var b=Btn("",()=>{if(target=="music"){useSystem=true;player.Pause();playing=false;}GoTo(target);},link[2]);b.Content=NavIcon(link[0],page==target?link[2]:null);if(page==target){b.Background=B("#22FFFFFF");b.Foreground=B("#FFFFFF");activeNav=b;}nav.Children.Add(b);}
 
   PageIn(ghost);
  }
@@ -61,7 +61,7 @@ public partial class App {
    var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(130));fade.Completed+=(s,e)=>{parent.Children.Remove(ghost);if(lastGhost==ghost)lastGhost=null;};ghost.BeginAnimation(UIElement.OpacityProperty,fade);
   }
   var slide=new TranslateTransform(24*dir,0);view.RenderTransform=slide;var ease=new CubicEase{EasingMode=EasingMode.EaseOut};
-  slide.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(0,TimeSpan.FromMilliseconds(340)){EasingFunction=ease});view.Opacity=0;view.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(260)){BeginTime=TimeSpan.FromMilliseconds(ghost!=null?90:0),EasingFunction=ease});
+  slide.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(0,TimeSpan.FromMilliseconds(420)){EasingFunction=new BackEase{Amplitude=.35,EasingMode=EasingMode.EaseOut}});Cascade();view.Opacity=0;view.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(260)){BeginTime=TimeSpan.FromMilliseconds(ghost!=null?90:0),EasingFunction=ease});
  }
  static void Focus(){
   var grid=new Grid();view.Children.Add(grid);
