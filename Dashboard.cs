@@ -61,10 +61,19 @@ public partial class App {
   for(int i=conversation.Count-1;i>=0&&list.Count<12;i--){chars+=conversation[i]["content"].Length;if(chars>6000&&list.Count>0)break;list.Insert(0,conversation[i]);}
   return list;
  }
+ static readonly System.Globalization.CultureInfo PtBr=new System.Globalization.CultureInfo("pt-BR");
+ // The small local model ignores the date in the system prompt, so plain date/time questions are answered here.
+ static string DateAnswer(string text){
+  var t=(text??"").ToLowerInvariant().Trim(' ','?','!','.');if(t.Length>60)return null;DateTime n=DateTime.Now;
+  if(System.Text.RegularExpressions.Regex.IsMatch(t,@"\bque horas?\b|\bhoras? (são|e) agora|\bhora atual"))return "Agora são "+n.ToString("HH:mm",PtBr)+".";
+  if(System.Text.RegularExpressions.Regex.IsMatch(t,@"\bque dia\b|\bqual (é )?a data\b|\bdata de hoje|\bdia da semana|\bem que dia estamos"))return "Hoje é "+n.ToString("dddd, d 'de' MMMM 'de' yyyy",PtBr)+".";
+  return null;
+ }
  static async void SendChat(){
   if(chatBusy||chatInput==null||String.IsNullOrWhiteSpace(chatInput.Text))return;
-    string message=chatInput.Text;chatInput.Clear();conversation.Add(new Dictionary<string,string>{{"role","user"},{"content",message}});AddChatBubble(message,true);if(conversation.Count>100)conversation.RemoveRange(0,conversation.Count-100);chatBusy=true;
-  TextBlock live=null;try{var context=new List<Dictionary<string,string>>{new Dictionary<string,string>{{"role","system"},{"content","Você é o Tito, um assistente dentro do app Tito, no Windows do usuário. Responda sempre em português do Brasil, de forma breve. Agora é "+DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy, HH:mm",new System.Globalization.CultureInfo("pt-BR"))+" (horário local do PC); use isso para perguntas sobre data e hora. Não invente acesso a tarefas, calendário ou arquivos. O timer está "+(running?"em andamento":"parado")+" e mostra "+Format(remaining)+". Você só conhece o que o usuário escreveu nesta conversa."}}};context.AddRange(RecentChat());
+    string message=chatInput.Text;chatInput.Clear();conversation.Add(new Dictionary<string,string>{{"role","user"},{"content",message}});AddChatBubble(message,true);if(conversation.Count>100)conversation.RemoveRange(0,conversation.Count-100);var quick=DateAnswer(message);if(quick!=null){conversation.Add(new Dictionary<string,string>{{"role","assistant"},{"content",quick}});if(On("chat"))AddChatBubble(quick,false);return;}
+  chatBusy=true;
+  TextBlock live=null;try{var context=new List<Dictionary<string,string>>{new Dictionary<string,string>{{"role","system"},{"content","Você é o Tito, um assistente dentro do app Tito, no Windows do usuário. Responda sempre em português do Brasil, de forma breve. Agora é "+DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy, HH:mm",PtBr)+" (horário local do PC); use isso para perguntas sobre data e hora. Não invente acesso a tarefas, calendário ou arquivos. O timer está "+(running?"em andamento":"parado")+" e mostra "+Format(remaining)+". Você só conhece o que o usuário escreveu nesta conversa."}}};context.AddRange(RecentChat());var last=context[context.Count-1];if(last["role"]=="user")context[context.Count-1]=new Dictionary<string,string>{{"role","user"},{"content",last["content"]+"\n\n[Data e hora atuais do PC: "+DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy, HH:mm",PtBr)+"]"}};
    if(On("chat"))live=AddChatBubble("…",false);Action<string> show=t=>{if(live!=null)live.Dispatcher.BeginInvoke(new Action(()=>{live.Text=t;if(chatScroll!=null)chatScroll.ScrollToEnd();}));};
    string content;if(IsOllama()){content=await ChatStream(ExtPort(),OllamaName(),context,show);}
    else{MotorProgress+=MotorUi;MotorShowProgress(true);try{content=await MotorChat(context,show);}finally{MotorProgress-=MotorUi;MotorShowProgress(false);}}
