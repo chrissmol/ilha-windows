@@ -4,6 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Windows;
+using Forms=System.Windows.Forms;
 using System.Windows.Controls;
 using System.Windows.Media;
 namespace Tito {
@@ -25,8 +26,8 @@ public partial class App {
   if((ps.BatteryChargeStatus&(System.Windows.Forms.BatteryChargeStatus.NoSystemBattery|System.Windows.Forms.BatteryChargeStatus.Unknown))!=0)return null;
   int pct=(int)Math.Round(ps.BatteryLifePercent*100);bool charging=ps.PowerLineStatus==System.Windows.Forms.PowerLineStatus.Online;
   batteryLow=!charging&&pct<=20;if(batteryKnown&&charging&&!wasCharging)loveUntil=DateTime.UtcNow.AddSeconds(2.5);batteryKnown=true;wasCharging=charging;
-  if(charging&&pct<100){color="#30D158";return "⚡ "+pct+"%";}
-  if(!charging&&pct<=30){color=pct<=20?"#FF453A":"#FFB000";return pct+"%";}
+  if(charging&&pct<100){color=Theme.Ok;return "⚡ "+pct+"%";}
+  if(!charging&&pct<=30){color=pct<=20?Theme.Bad:"#FFB000";return pct+"%";}
   return null;
  }
  static string NotesPath(){return Path.Combine(dataDir,"notes.txt");}
@@ -45,11 +46,14 @@ public partial class App {
   var header=new DockPanel{Margin=new Thickness(0,0,0,6)};if(action!=null){DockPanel.SetDock(action,Dock.Right);header.Children.Add(action);}var heading=T(title,19,PageHex(page));heading.FontWeight=FontWeights.SemiBold;header.Children.Add(heading);root.Children.Add(header);
   scroll=new ScrollViewer{VerticalScrollBarVisibility=ScrollBarVisibility.Auto};Grid.SetRow(scroll,1);root.Children.Add(scroll);var rows=Stack();scroll.Content=rows;return rows;
  }
+ static string notesPending;static System.Windows.Threading.DispatcherTimer notesSave;
+ // Grava a nota 600 ms depois da última tecla (e ao sair da aba/fechar), não a cada tecla.
+ static void FlushNotes(){if(notesSave!=null)notesSave.Stop();if(notesPending==null)return;try{File.WriteAllText(NotesPath(),notesPending);notesPending=null;}catch{}}
  static void Notes(){
-  ScrollViewer sc;var rows=Panel("Notas",out sc);
+  FlushNotes();ScrollViewer sc;var rows=Panel("Notas",out sc);
   string saved="";try{if(File.Exists(NotesPath()))saved=File.ReadAllText(NotesPath());}catch{}
-  notesBox=new TextBox{Text=saved,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Background=B("#18FFFFFF"),Foreground=B("#FFF8F6"),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(10),FontSize=13,MinHeight=130,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
-  notesBox.TextChanged+=(s,e)=>{typingUntil=DateTime.UtcNow.AddSeconds(3);try{File.WriteAllText(NotesPath(),notesBox.Text);}catch{}};rows.Children.Add(notesBox);
+  notesBox=new TextBox{Text=saved,AcceptsReturn=true,TextWrapping=TextWrapping.Wrap,Background=B("#18FFFFFF"),Foreground=B(Theme.Text),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(10),FontSize=13,MinHeight=130,VerticalScrollBarVisibility=ScrollBarVisibility.Auto};
+  notesBox.TextChanged+=(s,e)=>{typingUntil=DateTime.UtcNow.AddSeconds(3);notesPending=notesBox.Text;if(notesSave==null){notesSave=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(600)};notesSave.Tick+=(a,b)=>FlushNotes();w.Closed+=(a,b)=>FlushNotes();}notesSave.Stop();notesSave.Start();};rows.Children.Add(notesBox);
  }
  static void ClipboardPage(){
   ScrollViewer sc;var rows=Panel("Área de transferência",out sc,Btn("Limpar",()=>{clipItems.Clear();Switch("clipboard");}));
@@ -60,18 +64,39 @@ public partial class App {
   var list=new List<string[]>();try{if(File.Exists(AgendaPath()))foreach(string line in File.ReadAllLines(AgendaPath())){var p=line.Split(new[]{'|'},3);if(p.Length==3)list.Add(p);}}catch{}
   return list.OrderBy(p=>p[0]+p[1]).ToList();
  }
+ static string agendaError="";static DateTime lastAgendaCheck;static readonly HashSet<string> agendaFired=new HashSet<string>();
+ // "[hoje|amanhã|dd/MM|yyyy-MM-dd] 14:30|9h|9h30 título" -> date yyyy-MM-dd, time HH:mm.
+ static bool ParseAgenda(string text,DateTime now,out string date,out string time,out string title){
+  date=time=title="";
+  var m=System.Text.RegularExpressions.Regex.Match((text??"").Trim(),@"^(?:(?<d>\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}|hoje|amanh[ãa])\s+)?(?<h>\d{1,2})(?::(?<m>\d{2})|h(?<m>\d{2})?)\s+(?<t>.+)$",System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+  if(!m.Success)return false;
+  int h=int.Parse(m.Groups["h"].Value),min=m.Groups["m"].Success?int.Parse(m.Groups["m"].Value):0;if(h>23||min>59)return false;
+  DateTime d=now.Date;string ds=m.Groups["d"].Value.ToLowerInvariant();
+  if(ds.StartsWith("amanh"))d=d.AddDays(1);
+  else if(ds.Contains("-")){if(!DateTime.TryParseExact(ds,"yyyy-MM-dd",CultureInfo.InvariantCulture,DateTimeStyles.None,out d))return false;}
+  else if(ds.Contains("/")){var p=ds.Split('/');int dd=int.Parse(p[0]),mo=int.Parse(p[1]);try{d=new DateTime(now.Year,mo,dd);if(d<now.Date)d=d.AddYears(1);}catch{return false;}}
+  date=d.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);time=h.ToString("00")+":"+min.ToString("00");title=m.Groups["t"].Value;return true;
+ }
+ // Called from the 250 ms ticker: fires once per entry, only within 2 min after its time (so old entries don't ring when Tito opens).
+ static void AgendaReminderTick(){
+  DateTime now=DateTime.Now;if(now-lastAgendaCheck<TimeSpan.FromSeconds(1))return;lastAgendaCheck=now;
+  foreach(var p in AgendaEntries()){DateTime at;if(!DateTime.TryParseExact(p[0]+" "+p[1],"yyyy-MM-dd HH:mm",CultureInfo.InvariantCulture,DateTimeStyles.None,out at))continue;
+   if(now<at||now-at>TimeSpan.FromMinutes(2)||!agendaFired.Add(p[0]+"|"+p[1]+"|"+p[2]))continue;
+   excitedUntil=DateTime.UtcNow.AddSeconds(6);if(contextHidden||doNotDisturb)continue;
+   System.Media.SystemSounds.Asterisk.Play();if(tray!=null)tray.ShowBalloonTip(5000,"Tito · "+p[1],p[2],Forms.ToolTipIcon.Info);Switch("agenda");Expand(true);}
+ }
  static void Agenda(){
   ScrollViewer sc;var rows=Panel("Agenda",out sc);
-  var add=new TextBox{Background=B("#18FFFFFF"),Foreground=B("#FFF8F6"),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(8,5,8,5),FontSize=12,ToolTip="Hoje: 14:30 Reunião  ·  ou: 2026-11-20 09:00 Dentista",Margin=new Thickness(0,0,0,6)};
+  var add=new TextBox{Background=B("#18FFFFFF"),Foreground=B(Theme.Text),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),Padding=new Thickness(8,5,8,5),FontSize=12,ToolTip="14:30 Reunião  ·  amanhã 9h Dentista  ·  25/11 18h30 Jantar  ·  2026-11-20 09:00 Médico",Margin=new Thickness(0,0,0,6)};
   add.KeyDown+=(s,e)=>{if(e.Key!=System.Windows.Input.Key.Enter||String.IsNullOrWhiteSpace(add.Text))return;
-   var m=System.Text.RegularExpressions.Regex.Match(add.Text.Trim(),@"^(?:(\d{4}-\d{2}-\d{2})\s+)?(\d{1,2}:\d{2})\s+(.+)$");if(!m.Success){add.ToolTip="Use: HH:mm título";return;}
-   string date=m.Groups[1].Success?m.Groups[1].Value:DateTime.Now.ToString("yyyy-MM-dd");string time=m.Groups[2].Value.PadLeft(5,'0');
-   try{File.AppendAllText(AgendaPath(),date+"|"+time+"|"+m.Groups[3].Value.Replace("|"," ")+"\n");}catch{}celebrateUntil=DateTime.UtcNow.AddSeconds(2);Switch("agenda");};
+   string date,time,title;if(!ParseAgenda(add.Text,DateTime.Now,out date,out time,out title)){agendaError="Não entendi. Tente: 14:30 Reunião · amanhã 9h Dentista · 25/11 18h30 Jantar";Switch("agenda");return;}
+   agendaError="";try{File.AppendAllText(AgendaPath(),date+"|"+time+"|"+title.Replace("|"," ")+"\n");}catch{agendaError="Não consegui salvar a agenda.";}celebrateUntil=DateTime.UtcNow.AddSeconds(2);Switch("agenda");};
   rows.Children.Add(add);
+  if(agendaError!="")rows.Children.Add(T(agendaError,12,"#FF453A"));
   string today=DateTime.Now.ToString("yyyy-MM-dd");var upcoming=AgendaEntries().Where(p=>String.CompareOrdinal(p[0],today)>=0).Take(12).ToList();
   if(upcoming.Count==0)rows.Children.Add(T("Nada marcado. Digite “14:30 Reunião” e Enter.",13,"#BDBDC5"));
   foreach(var p in upcoming){var row=Stack(Orientation.Horizontal);string when=p[0]==today?p[1]:DateTime.ParseExact(p[0],"yyyy-MM-dd",CultureInfo.InvariantCulture).ToString("dd/MM",CultureInfo.InvariantCulture)+" "+p[1];
-   var t=T(when,12,p[0]==today?"#FFB36B":"#AFA9B4");t.Width=84;row.Children.Add(t);row.Children.Add(T(p[2],13));
+   var t=T(when,12,p[0]==today?"#FFB36B":Theme.Muted);t.Width=84;row.Children.Add(t);row.Children.Add(T(p[2],13));
    var entry=p;var done=Btn("✕",()=>{try{File.WriteAllLines(AgendaPath(),AgendaEntries().Where(x=>!(x[0]==entry[0]&&x[1]==entry[1]&&x[2]==entry[2])).Select(x=>String.Join("|",x)).ToArray());}catch{}Switch("agenda");},"Remover");done.Padding=new Thickness(6,2,6,2);row.Children.Add(done);row.Margin=new Thickness(0,3,0,3);rows.Children.Add(row);}
  }
 }

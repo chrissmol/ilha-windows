@@ -29,10 +29,10 @@ public partial class App {
  static MediaState media=new MediaState();
  static bool useSystem=true; static Process mediaWorker; static int poll;
  static TextBlock mediaArtist,mediaHint,agentStatus,agentDetail,agentAge;
- static Image albumImage;static string lastCover="",lastAgent="";
+ static Image albumImage;static string lastCover="",lastAgent="";static DateTime lastAgentStamp,lastMediaStamp;static TextBlock lastAgentUi;
  static Slider systemSeek;static Button systemPlay,systemNext,systemPrevious;static Line rulerMarker;static Canvas rulerCanvas;
  static DispatcherTimer leaveTimer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(30)};
- static string Accent(string n){return n=="music"?"#FF375F":n=="focus"?"#BF5AF2":n=="ia"?"#FF9F0A":n=="agenda"?"#FF453A":n=="notes"?"#FFD60A":n=="clipboard"?"#30D158":"#FFFFFF";}
+ static string Accent(string n){return n=="music"?"#FF375F":n=="focus"?"#BF5AF2":n=="ia"?Theme.Warn:n=="agenda"?Theme.Bad:n=="notes"?"#FFD60A":n=="clipboard"?Theme.Ok:"#FFFFFF";}
  static StackPanel NavIcon(string name,string label){
   var p=new StackPanel{Orientation=Orientation.Horizontal};
   string path=name=="home"?"M1,7 L7,1 13,7 M3,6 L3,13 11,13 11,6 M6,13 L6,9 8,9 8,13":name=="music"?"M5,11 L5,3 12,1 12,9 M5,4 L12,2 M5,11 C5,14 0,14 1,11 C2,9 5,9 5,11 M12,9 C12,12 7,12 8,9 C9,7 12,7 12,9":name=="focus"?"M7,1 A6,6 0 1 1 6.99,1 M7,4 L7,7 10,8":name=="ia"?"M2,2 L12,2 Q14,2 14,4 L14,10 Q14,12 12,12 L5,12 2,14 2,12 Q0,12 0,10 L0,4 Q0,2 2,2 M4,6 L4,8 M10,6 L10,8":name=="painel"?"M2,13 L2,8 M7,13 L7,2 M12,13 L12,6":name=="agenda"?"M1,3 L13,3 13,13 1,13 Z M1,6 L13,6 M4,1 L4,4 M10,1 L10,4":name=="notes"?"M2,1 L12,1 12,13 2,13 Z M4,4 L10,4 M4,7 L10,7 M4,10 L8,10":name=="clipboard"?"M3,2 L11,2 11,13 3,13 Z M5,0 L9,0 9,3 5,3 Z M5,7 L9,7 M5,10 L9,10":name=="settings"?"M7,0 L9,3 12,2 12,5 14,7 12,9 12,12 9,11 7,14 5,11 2,12 2,9 0,7 2,5 2,2 5,3 Z M7,4 A3,3 0 1 1 6.99,4":"M7,0 L7,14 M0,7 L14,7 M2,2 L12,12 M2,12 L12,2";
@@ -96,6 +96,7 @@ public partial class App {
  static void UpdateAgent(){
   if(!On("geral")||agentStatus==null)return;
   string path=System.IO.Path.Combine(dataDir,"agent.json");if(!File.Exists(path)){agentDetail.Text="Conecte uma sessão para acompanhar eventos reais.";return;}
+  DateTime agentStamp=File.GetLastWriteTimeUtc(path);if(agentStamp==lastAgentStamp&&ReferenceEquals(lastAgentUi,agentStatus))return;lastAgentStamp=agentStamp;lastAgentUi=agentStatus;
   try{var e=json.Deserialize<Dictionary<string,string>>(File.ReadAllText(path));string ev=e.ContainsKey("event")?e["event"]:"";string tool=e.ContainsKey("tool")?e["tool"]:"";
    agentStatus.Text=ev=="Stop"?"Concluído":ev=="Notification"?"Aguardando sua atenção":ev=="SessionEnd"?"Sessão encerrada":ev=="PreToolUse"?"Executando · "+tool:ev=="PostToolUse"?"Ferramenta concluída · "+tool:ev=="UserPromptSubmit"?"Trabalhando":"Sessão conectada";
    agentDetail.Text=(e.ContainsKey("project")?e["project"]:"")+(e.ContainsKey("file")?"  /  "+e["file"]:"");DateTime stamp;if(DateTime.TryParse(e["updated"],out stamp))agentAge.Text="Último evento às "+stamp.ToLocalTime().ToString("HH:mm:ss");
@@ -104,7 +105,7 @@ public partial class App {
  }
  static void PollIntegrations(){
   if(++poll%4!=0)return;
-  try{string path=System.IO.Path.Combine(dataDir,"media.json");if(File.Exists(path)){media=json.Deserialize<MediaState>(File.ReadAllText(path));DateTime stamp;if(!DateTime.TryParse(media.updated,out stamp)||DateTime.UtcNow-stamp.ToUniversalTime()>TimeSpan.FromSeconds(12)){media.available=false;media.playing=false;media.cover="";media.artist="A conexão de mídia foi interrompida.";}UpdateSystemMusic();}}
+  try{string path=System.IO.Path.Combine(dataDir,"media.json");if(File.Exists(path)){DateTime written=File.GetLastWriteTimeUtc(path);if(written!=lastMediaStamp){lastMediaStamp=written;media=json.Deserialize<MediaState>(File.ReadAllText(path));}DateTime stamp;if(!DateTime.TryParse(media.updated,out stamp)||DateTime.UtcNow-stamp.ToUniversalTime()>TimeSpan.FromSeconds(12)){media.available=false;media.playing=false;media.cover="";media.artist="A conexão de mídia foi interrompida.";}UpdateSystemMusic();}}
   catch{}
 
   UpdateAgent();UpdateDashboard();

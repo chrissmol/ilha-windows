@@ -12,12 +12,12 @@ namespace Tito {
 public partial class App {
  static bool doNotDisturb,dropHover,compactWide;static double compactWidth=176;static string pillKey="";static int selectedMonitor;static TextBlock compactStatus;static bool focusWasRunning;static DateTime celebrateUntil;
  static MascotEyes headerMascot;static DateTime lastMascotInteraction=DateTime.UtcNow,gazeUntil,surprisedUntil;static Point lastGaze;static bool mediaWasPlaying;
- static DesktopAudio.PeakMonitor outputMeter;static System.Windows.Threading.DispatcherTimer waveTimer;
+ static DesktopAudio.PeakMonitor outputMeter;static System.Windows.Threading.DispatcherTimer waveTimer;static bool waveWasActive;
  sealed class ShelfItem {public string Name,Text,Folder;public string[] Files;public BitmapSource Image;public DateTime Added=DateTime.UtcNow;}
  static List<ShelfItem> shelf=new List<ShelfItem>();const int ShelfLimit=12;
  static Rect MonitorArea(){var screens=System.Windows.Forms.Screen.AllScreens;var s=screens[Math.Max(0,Math.Min(selectedMonitor,screens.Length-1))];var a=s.WorkingArea;var source=PresentationSource.FromVisual(w);var transform=source==null?Matrix.Identity:source.CompositionTarget.TransformFromDevice;var origin=transform.Transform(new Point(a.Left,a.Top));var size=transform.Transform(new Vector(a.Width,a.Height));return new Rect(origin.X,origin.Y,size.X,size.Y);}
  static void SetupExperience(){
-  if(!uiTest){outputMeter=new DesktopAudio.PeakMonitor();waveTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(50)};waveTimer.Tick+=(s,e)=>{bool active=!contextHidden&&(page=="music"||(!opened&&media.playing));outputMeter.Enabled=active;bool visible=page=="music"||(!opened&&media.playing);mascot.MediaMode=visible;mascot.ToolTip=visible?(outputMeter.Available?"Nível real da saída padrão · mistura de todos os aplicativos":"Medição de áudio indisponível · "+outputMeter.Error):"Tito";if(headerMascot!=null)headerMascot.MediaMode=page=="music";Color waves=glassTint.HasValue?glassTint.Value:Color.FromRgb(83,190,255);mascot.WaveColor=waves;if(headerMascot!=null)headerMascot.WaveColor=waves;double peak=active&&outputMeter.Available?outputMeter.Level:0;mascot.AudioPeak(peak);if(headerMascot!=null)headerMascot.AudioPeak(peak);};waveTimer.Start();w.Closed+=(s,e)=>{waveTimer.Stop();outputMeter.Dispose();};}
+  if(!uiTest){outputMeter=new DesktopAudio.PeakMonitor();waveTimer=new System.Windows.Threading.DispatcherTimer{Interval=TimeSpan.FromMilliseconds(50)};waveTimer.Tick+=(s,e)=>{bool active=!contextHidden&&(page=="music"||(!opened&&media.playing));outputMeter.Enabled=active;bool visible=page=="music"||(!opened&&media.playing);mascot.MediaMode=visible;mascot.ToolTip=visible?(outputMeter.Available?"Nível real da saída padrão · mistura de todos os aplicativos":"Medição de áudio indisponível · "+outputMeter.Error):"Tito";if(headerMascot!=null)headerMascot.MediaMode=page=="music";Color waves=glassTint.HasValue?glassTint.Value:Color.FromRgb(83,190,255);mascot.WaveColor=waves;if(headerMascot!=null)headerMascot.WaveColor=waves;double peak=active&&outputMeter.Available?outputMeter.Level:0;bool busy=active||waveWasActive||mascot.MediaBlend>.001||(headerMascot!=null&&headerMascot.MediaBlend>.001);if(busy){mascot.AudioPeak(peak);if(headerMascot!=null)headerMascot.AudioPeak(peak);}waveWasActive=active;waveTimer.Interval=TimeSpan.FromMilliseconds(busy?50:250);};waveTimer.Start();w.Closed+=(s,e)=>{waveTimer.Stop();outputMeter.Dispose();};}
   w.PreviewMouseMove+=(s,e)=>lastMascotInteraction=DateTime.UtcNow;w.PreviewKeyDown+=(s,e)=>lastMascotInteraction=DateTime.UtcNow;
   if(!secondary)try{File.Delete(SharedPath());Directory.Delete(Path.Combine(dataDir,"shelf"),true);}catch{}
   if(!secondary)selectedMonitor=Math.Max(0,Array.FindIndex(System.Windows.Forms.Screen.AllScreens,x=>x.Primary));
@@ -71,7 +71,7 @@ public partial class App {
   }catch{}
  }
  static void ExperienceTick(){
-  SyncTick();ClipboardTick();PainelPoll();
+  SyncTick();ClipboardTick();PainelPoll();AgendaReminderTick();
   if(focusWasRunning&&!running&&remaining<=0)excitedUntil=DateTime.UtcNow.AddSeconds(5);focusWasRunning=running;
   var expired=shelf.Where(x=>DateTime.UtcNow-x.Added>TimeSpan.FromHours(1)).ToArray();foreach(var x in expired)Forget(x);bool removed=expired.Length>0;if(removed&&page=="shelf")Switch("shelf");
   if(mediaWasPlaying&&!media.playing)celebrateUntil=DateTime.UtcNow.AddSeconds(1);mediaWasPlaying=media.playing;
@@ -88,6 +88,7 @@ public partial class App {
   var files=new DataObject(DataFormats.FileDrop,new[]{"C:\\sample.png"});ReceiveDrop(files);if(shelf[0].Files[0]!="C:\\sample.png")throw new Exception("Shelf file reference");
   for(int i=0;i<15;i++){var d=new DataObject();d.SetText("Item "+i);ReceiveDrop(d);}if(shelf.Count!=ShelfLimit||shelf[0].Text!="Item 14")throw new Exception("Shelf capacity/order");
   if(ShelfData(shelf[0]).GetText()!="Item 14")throw new Exception("Shelf clipboard payload");shelf.Clear();celebrateUntil=DateTime.MinValue;
+  {string ad,at,tt;var n0=new DateTime(2026,11,19,10,0,0);if(!ParseAgenda("amanhã 9h30 Dentista",n0,out ad,out at,out tt)||ad!="2026-11-20"||at!="09:30"||tt!="Dentista"||!ParseAgenda("14:30 X",n0,out ad,out at,out tt)||ad!="2026-11-19"||ParseAgenda("25:00 X",n0,out ad,out at,out tt)||ParseAgenda("qualquer coisa",n0,out ad,out at,out tt))throw new Exception("Agenda parser");}
   bool inter=false;foreach(var face in w.FontFamily.GetTypefaces()){GlyphTypeface glyph;if(face.TryGetGlyphTypeface(out glyph)&&glyph.FamilyNames.Values.Any(x=>x.IndexOf("Inter",StringComparison.OrdinalIgnoreCase)>=0)){inter=true;break;}}if(!inter)throw new Exception("Embedded Inter font did not resolve");
   foreach(string panel in new[]{"shelf","audio"}){Switch(panel);Capture(panel);}Switch("home");
  }
