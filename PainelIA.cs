@@ -75,7 +75,7 @@ public partial class App {
  static string PainelCache(){return Path.Combine(dataDir,"painel.json");}
  // One island scans; the others reuse its cache file (no repeated 100+ MB reads).
  static void PainelPoll(){
-  if(painelBusy||DateTime.UtcNow<painelNext)return;painelBusy=true;painelNext=DateTime.UtcNow.AddSeconds(300);
+  if(painelBusy||contextHidden||DateTime.UtcNow<painelNext)return;painelBusy=true;painelNext=DateTime.UtcNow.AddSeconds(300);
   var thread=new System.Threading.Thread(()=>{
    Dictionary<string,object> data=null;bool ok=true;
    try{

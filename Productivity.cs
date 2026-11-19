@@ -86,6 +86,23 @@ public partial class App {
   date=d.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);time=h.ToString("00")+":"+min.ToString("00");title=m.Groups["t"].Value;return true;
  }
  // Called from the 250 ms ticker: fires once per entry, only within 2 min after its time (so old entries don't ring when Tito opens).
+ // Focus time done today ("yyyy-MM-dd|seconds" in focus.txt). Only the main island counts, so several screens do not add the same minutes twice.
+ static double focusToday;static string focusDay="";static DateTime focusLast=DateTime.MinValue;static int focusSavedMin;static TextBlock focusLabel;
+ static string FocusPath(){return Path.Combine(dataDir,"focus.txt");}
+ static void FocusLoad(){
+  string today=DateTime.Now.ToString("yyyy-MM-dd");focusDay=today;focusToday=0;
+  try{if(File.Exists(FocusPath())){var p=File.ReadAllText(FocusPath()).Trim().Split('|');double sec;if(p.Length==2&&p[0]==today&&Double.TryParse(p[1],NumberStyles.Float,CultureInfo.InvariantCulture,out sec))focusToday=sec;}}catch{}
+  focusSavedMin=(int)(focusToday/60);
+ }
+ static string FocusTodayText(){if(secondary||focusDay=="")FocusLoad();int m=(int)(focusToday/60);return "Hoje: "+(m>=60?(m/60)+" h "+(m%60)+" min":m+" min")+" de foco";}
+ static void FocusTick(){
+  if(secondary)return;
+  if(focusDay!=DateTime.Now.ToString("yyyy-MM-dd"))FocusLoad();
+  var now=DateTime.UtcNow;if(running&&focusLast!=DateTime.MinValue)focusToday+=Math.Min(2,(now-focusLast).TotalSeconds);
+  bool stopped=!running&&focusLast!=DateTime.MinValue;focusLast=running?now:DateTime.MinValue;
+  int min=(int)(focusToday/60);
+  if(min!=focusSavedMin||stopped){focusSavedMin=min;try{File.WriteAllText(FocusPath(),focusDay+"|"+focusToday.ToString("F0",CultureInfo.InvariantCulture));}catch{}if(focusLabel!=null&&page=="focus")focusLabel.Text=FocusTodayText();}
+ }
  static void AgendaReminderTick(){
   DateTime now=DateTime.Now;if(now-lastAgendaCheck<TimeSpan.FromSeconds(1))return;lastAgendaCheck=now;bool soon=false;
   foreach(var p in AgendaEntries()){DateTime at;if(!DateTime.TryParseExact(p[0]+" "+p[1],"yyyy-MM-dd HH:mm",CultureInfo.InvariantCulture,DateTimeStyles.None,out at))continue;
