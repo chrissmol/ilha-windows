@@ -38,6 +38,12 @@ public partial class App {
   if(!charging&&pct<=30){color=pct<=20?Theme.Bad:"#FFB000";return pct+"%";}
   return null;
  }
+ // Pomodoro: foco 25 min, pausa 5 (15 a cada 4 ciclos); cada fim vai para focus-log.txt.
+ static int focusCycles;static bool onBreak;
+ static void FocusEnded(){
+  try{File.AppendAllText(Path.Combine(dataDir,"focus-log.txt"),DateTime.Now.ToString("yyyy-MM-dd HH:mm")+"|"+(onBreak?"pausa":"foco")+"\n");}catch{}
+  if(!onBreak)focusCycles++;onBreak=!onBreak;remaining=onBreak?(focusCycles%4==0?900:300):1500;
+ }
  static string NotesPath(){return Path.Combine(dataDir,"notes.txt");}
  static string AgendaPath(){return Path.Combine(dataDir,"agenda.txt");}
  [System.Runtime.InteropServices.DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();static uint clipSeq;
