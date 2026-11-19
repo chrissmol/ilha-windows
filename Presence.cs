@@ -37,6 +37,14 @@ public static class DesktopContext {
   double s=(r.Right-r.Left)/640.0,cx=(r.Left+r.Right)/2.0;
   return p.X>=cx-(dipWidth/2+margin)*s&&p.X<=cx+(dipWidth/2+margin)*s&&p.Y>=r.Top+(8-margin)*s&&p.Y<=r.Top+(8+dipHeight+margin)*s;
  }
+ static IntPtr lastFocus;
+ // Janela em foco mudou: devolve para onde os olhos devem olhar (na direção dela).
+ public static bool FocusChanged(Window own,out Point gaze){
+  gaze=new Point();IntPtr h=GetForegroundWindow();if(h==lastFocus)return false;lastFocus=h;
+  Rect me,r;if(h==IntPtr.Zero||h==new WindowInteropHelper(own).Handle||IsIconic(h)||!GetWindowRect(h,out r)||!GetWindowRect(new WindowInteropHelper(own).Handle,out me))return false;
+  double cx=(me.Left+me.Right)/2.0,cy=me.Top+25*(me.Bottom-me.Top)/300.0;
+  gaze=new Point(2.6*Math.Tanh(((r.Left+r.Right)/2.0-cx)/260.0),1.4*Math.Tanh(((r.Top+r.Bottom)/2.0-cy)/160.0));return true;
+ }
  public static bool IsToolWindow(IntPtr hwnd){int style=GetWindowLong(hwnd,-20);return (style&0x80)!=0&&(style&0x40000)==0;}
  // Fullscreen = the shell says so (game, presentation) or a window covers the monitor; a maximized window that keeps its title bar is not fullscreen.
  public static bool IsFullscreen(bool covers,bool zoomed,bool caption,int state){return state==2||state==3||state==4||(covers&&!(zoomed&&caption));}
@@ -141,8 +149,9 @@ public partial class App {
   if(openSignal!=null&&openSignal.WaitOne(0)&&!contextHidden){w.Show();Expand(true);}
   if(!opened&&mascot!=null&&!contextHidden){
    
-   if(DateTime.UtcNow>=nextQuirk){nextQuirk=DateTime.UtcNow.AddSeconds(14+random.NextDouble()*16);if(mascot.Mood=="idle"){int q=random.Next(3);if(q==0)winkUntil=DateTime.UtcNow.AddMilliseconds(800);else if(q==1){quirkGaze=new Point(random.Next(2)==0?-2:2,0);quirkUntil=DateTime.UtcNow.AddMilliseconds(1300);}else mascot.Hop(1);}}
-   if(DateTime.UtcNow>=nextBlink){mascot.BlinkOnce();nextBlink=DateTime.UtcNow.AddSeconds(3+random.NextDouble()*4);}
+   if(DateTime.UtcNow>=nextQuirk){nextQuirk=DateTime.UtcNow.AddSeconds(14+random.NextDouble()*16);if(mascot.Mood=="idle"){int q=agendaSoon?3:random.Next(3);if(q==0)winkUntil=DateTime.UtcNow.AddMilliseconds(800);else if(q==1){quirkGaze=new Point(random.Next(2)==0?-2:2,0);quirkUntil=DateTime.UtcNow.AddMilliseconds(1300);}else if(q==3){quirkGaze=new Point(3,-1.4);quirkUntil=DateTime.UtcNow.AddMilliseconds(900);}else mascot.Hop(1);}} // lembrete chegando: olha de relance para o relógio
+   Point glance;if(mascot.Mood=="idle"&&DesktopContext.FocusChanged(w,out glance)){quirkGaze=glance;quirkUntil=DateTime.UtcNow.AddMilliseconds(1100);}
+   if(DateTime.UtcNow>=nextBlink){mascot.BlinkOnce(random.NextDouble()<.2);nextBlink=DateTime.UtcNow.AddSeconds(3+random.NextDouble()*4);}
   }
  }
  static void Restart(){

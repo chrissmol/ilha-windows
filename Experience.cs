@@ -71,11 +71,12 @@ public partial class App {
   }catch{}
  }
  static void ExperienceTick(){
-  SyncTick();ClipboardTick();PainelPoll();AgendaReminderTick();
+  SyncTick();CpuTick();ClipboardTick();PainelPoll();AgendaReminderTick();
   if(focusWasRunning&&!running&&remaining<=0)excitedUntil=DateTime.UtcNow.AddSeconds(5);focusWasRunning=running;
   var expired=shelf.Where(x=>DateTime.UtcNow-x.Added>TimeSpan.FromHours(1)).ToArray();foreach(var x in expired)Forget(x);bool removed=expired.Length>0;if(removed&&page=="shelf")Switch("shelf");
   if(mediaWasPlaying&&!media.playing)celebrateUntil=DateTime.UtcNow.AddSeconds(1);mediaWasPlaying=media.playing;
-  var now=DateTime.UtcNow;string mood=now<dizzyUntil?"dizzy":dropHover||now<curiousUntil?"curious":now<surprisedUntil?"surprised":now<excitedUntil?"excited":now<loveUntil?"love":now<celebrateUntil?"happy":chatBusy||now<agentBusyUntil?"thinking":batteryLow||painelHigh?"worry":running||now<typingUntil?"focus":media.playing?"music":now<winkUntil?"wink":DateTime.UtcNow-lastMascotInteraction>TimeSpan.FromSeconds(60)&&!keepAwake?"sleepy":"idle";
+  var now=DateTime.UtcNow;if(chatWasBusy&&!chatBusy)chatDoneUntil=now.AddSeconds(1.5);chatWasBusy=chatBusy;string mood=now<dizzyUntil?"dizzy":dropHover||now<curiousUntil?"curious":now<surprisedUntil?"surprised":now<excitedUntil?"excited":now<loveUntil?"love":now<celebrateUntil||now<welcomeUntil||now<chatDoneUntil?"happy":chatBusy||now<agentBusyUntil?"thinking":batteryLow||painelHigh||cpuHigh?"worry":running||now<typingUntil?"focus":media.playing?"music":now<winkUntil?"wink":DateTime.UtcNow-lastMascotInteraction>TimeSpan.FromSeconds(60)&&!keepAwake?"sleepy":"idle";
+  if(lastMood=="sleepy"&&mood!="sleepy"&&mood!="dizzy"){surprisedUntil=now.AddMilliseconds(500);mood="surprised";} // acordou: abre os olhos com susto
   if(mood=="excited"&&lastMood!="excited")Confetti();lastMood=mood;
   if(mascot!=null){mascot.Mood=mood;mascot.InvalidateVisual();}if(headerMascot!=null)headerMascot.Mood=mood;
   if(compactStatus!=null){string text=running?Format(remaining):media.playing&&!String.IsNullOrEmpty(media.title)?media.title:"";string battColor=null,battHex;string battText=BatteryText(out battHex);if(text.Length==0&&battText!=null){text=battText;battColor=battHex;}compactStatus.MaxWidth=130;compactStatus.TextTrimming=TextTrimming.CharacterEllipsis;compactStatus.Text=text;compactStatus.Foreground=running?B("#BC83FF"):battColor!=null?B(battColor):Brushes.White;compactStatus.Visibility=text.Length>0?Visibility.Visible:Visibility.Collapsed;bool wide=text.Length>0;double cw=running||battColor!=null?176:230;if(compactWide!=wide||(wide&&compactWidth!=cw)){compactWide=wide;compactWidth=cw;if(!opened)SetPose(false,true);}
@@ -89,6 +90,7 @@ public partial class App {
   for(int i=0;i<15;i++){var d=new DataObject();d.SetText("Item "+i);ReceiveDrop(d);}if(shelf.Count!=ShelfLimit||shelf[0].Text!="Item 14")throw new Exception("Shelf capacity/order");
   if(ShelfData(shelf[0]).GetText()!="Item 14")throw new Exception("Shelf clipboard payload");shelf.Clear();celebrateUntil=DateTime.MinValue;
   {string ad,at,tt;var n0=new DateTime(2026,11,19,10,0,0);if(!ParseAgenda("amanhã 9h30 Dentista",n0,out ad,out at,out tt)||ad!="2026-11-20"||at!="09:30"||tt!="Dentista"||!ParseAgenda("14:30 X",n0,out ad,out at,out tt)||ad!="2026-11-19"||ParseAgenda("25:00 X",n0,out ad,out at,out tt)||ParseAgenda("qualquer coisa",n0,out ad,out at,out tt))throw new Exception("Agenda parser");}
+  {string ra;if(RoboParse("Inicia um foco de 45 minutos",out ra)!="focus"||ra!="45"||RoboParse("anota: comprar leite",out ra)!="note"||ra!="comprar leite"||RoboParse("me lembra amanhã 9h Dentista",out ra)!="agenda"||ra!="amanhã 9h Dentista"||RoboParse("o que tenho hoje?",out ra)!="q:agenda"||RoboParse("pausa a música",out ra)!="play"||RoboParse("coloca o volume em 30%",out ra)!="vol"||ra!="30"||RoboParse("abre a calculadora",out ra)!="open"||ra!="calculadora"||RoboParse("quanta bateria eu tenho",out ra)!="q:battery"||RoboParse("conta uma piada",out ra)!=null)throw new Exception("Robo intents");}
   bool inter=false;foreach(var face in w.FontFamily.GetTypefaces()){GlyphTypeface glyph;if(face.TryGetGlyphTypeface(out glyph)&&glyph.FamilyNames.Values.Any(x=>x.IndexOf("Inter",StringComparison.OrdinalIgnoreCase)>=0)){inter=true;break;}}if(!inter)throw new Exception("Embedded Inter font did not resolve");
   foreach(string panel in new[]{"shelf","audio"}){Switch(panel);Capture(panel);}Switch("home");
  }
