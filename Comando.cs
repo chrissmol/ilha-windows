@@ -28,6 +28,10 @@ public partial class App {
   if(Regex.IsMatch(t,@"^(?:parar|pausar|pause)\s+foco$",RegexOptions.IgnoreCase))add("Pausar o foco",CmdPauseFocus);
   if((m=Regex.Match(t,@"^(?:nota|anotar)\s+(.+)$",RegexOptions.IgnoreCase)).Success){string note=m.Groups[1].Value;add("Anotar: "+note,()=>{try{AddNote(note);CmdDone();}catch(Exception ex){MessageBox.Show(ex.Message,"Tito");}});}
   if((m=Regex.Match(t,@"^agenda\s+(?:(\d{4}-\d{2}-\d{2})\s+)?(\d{1,2}:\d{2})\s+(.+)$",RegexOptions.IgnoreCase)).Success){string date=m.Groups[1].Success?m.Groups[1].Value:DateTime.Now.ToString("yyyy-MM-dd");string time=m.Groups[2].Value.PadLeft(5,'0');string title=m.Groups[3].Value.Replace("|"," ");add("Agendar "+time+" "+title,()=>{try{AddAgenda(date,time,title);CmdDone();}catch(Exception ex){MessageBox.Show(ex.Message,"Tito");}});}
+  if((m=Regex.Match(t,@"^pausa(?:\s+(\d{1,2}))?$",RegexOptions.IgnoreCase)).Success){int min=m.Groups[1].Success?Math.Max(1,Int32.Parse(m.Groups[1].Value)):5;add("Pausa de "+min+" min",()=>{CmdFocus(min);onBreak=true;});}
+  if((m=Regex.Match(t,@"^(?:lembrar|lembrete)\s+em\s+(\d{1,3})\s*(?:min|m)\s+(.+)$",RegexOptions.IgnoreCase)).Success){int min=Int32.Parse(m.Groups[1].Value);string title=m.Groups[2].Value;add("Lembrar em "+min+" min: "+title,()=>{try{var at=DateTime.Now.AddMinutes(min);AddAgenda(at.ToString("yyyy-MM-dd"),at.ToString("HH:mm"),title);CmdDone();}catch(Exception ex){MessageBox.Show(ex.Message,"Tito");}});}
+  if((m=Regex.Match(t,@"^volume\s+(\d{1,3})$",RegexOptions.IgnoreCase)).Success){int v=Math.Min(100,Int32.Parse(m.Groups[1].Value));add("Volume em "+v+"%",()=>{DesktopAudio.Volume(v/100f);CmdDone();});}
+  if(Regex.IsMatch(t,@"^(?:não incomodar|nao incomodar|dnd)$",RegexOptions.IgnoreCase))add(doNotDisturb?"Desligar não incomodar":"Ligar não incomodar",()=>{doNotDisturb=!doNotDisturb;CmdDone();});
   if(Regex.IsMatch(t,@"^(?:tocar|pausar|play|pause)$",RegexOptions.IgnoreCase))add("Tocar / pausar mídia",()=>SendMedia("toggle"));
   if(Regex.IsMatch(t,@"^(?:próxima|proxima|next)$",RegexOptions.IgnoreCase))add("Próxima faixa",()=>SendMedia("next"));
   string low=t.ToLowerInvariant();
@@ -39,8 +43,8 @@ public partial class App {
  }
  static void CommandBox(){
   if(cmdWin!=null){cmdWin.Close();return;}
-  var box=new TextBox{Background=Brushes.Transparent,Foreground=B("#FFF8F6"),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),FontSize=18,Padding=new Thickness(12,10,12,10),ToolTip="foco 25 · nota texto · agenda 14:30 Reunião · abrir notepad · notas"};
-  var rows=Stack();var hint=T("foco 25  ·  nota …  ·  agenda 14:30 …  ·  abrir …  ·  notas",11,"#8E8892");hint.Margin=new Thickness(14,0,14,10);
+  var box=new TextBox{Background=Brushes.Transparent,Foreground=B("#FFF8F6"),CaretBrush=Brushes.White,BorderThickness=new Thickness(0),FontSize=18,Padding=new Thickness(12,10,12,10),ToolTip="foco 25 · pausa 5 · nota texto · lembrar em 10 min texto · volume 40 · não incomodar · agenda 14:30 Reunião · abrir notepad · notas"};
+  var rows=Stack();var hint=T("foco 25  ·  pausa  ·  nota …  ·  lembrar em 10 min …  ·  volume 40  ·  não incomodar  ·  abrir …",11,"#8E8892");hint.Margin=new Thickness(14,0,14,10);
   var items=new List<KeyValuePair<string,Action>>();int sel=0;
   Action refresh=()=>{items=CommandMatches(box.Text);if(sel>=items.Count)sel=0;rows.Children.Clear();
    for(int i=0;i<items.Count;i++)rows.Children.Add(new Border{CornerRadius=new CornerRadius(8),Margin=new Thickness(6,1,6,1),Padding=new Thickness(8,6,8,6),Background=i==sel?B("#33FFFFFF"):Brushes.Transparent,Child=T(items[i].Key,13)});

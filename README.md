@@ -89,3 +89,5 @@ Na aba Mídia, os olhos se transformam em sete barras que mostram o histórico r
 - Notas: várias páginas (botões 1, 2, … e +), em `Dados\notes.txt`, `notes-2.txt` etc. A busca (Enter) abre a próxima página que contém o texto. O Robo grava e lê só a página 1.
 
 - Claude Code: o cartão do dashboard conta as sessões abertas (um arquivo por sessão em `Dados\sessions`, apagado no fim da sessão) e mostra "N aguardando você" quando alguma pede aprovação.
+
+- Caixa de comando (Ctrl+Alt+Espaço): além de foco, nota, agenda e abrir, agora aceita `pausa 5`, `lembrar em 10 min texto`, `volume 40` e `não incomodar`.
