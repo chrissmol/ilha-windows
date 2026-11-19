@@ -71,7 +71,7 @@ public partial class App {
   }catch{}
  }
  static void ExperienceTick(){
-  SyncTick();ClipboardTick();PainelPoll();
+  SyncTick();ClipboardTick();PainelPoll();AgendaReminderTick();
   if(focusWasRunning&&!running&&remaining<=0)excitedUntil=DateTime.UtcNow.AddSeconds(5);focusWasRunning=running;
   var expired=shelf.Where(x=>DateTime.UtcNow-x.Added>TimeSpan.FromHours(1)).ToArray();foreach(var x in expired)Forget(x);bool removed=expired.Length>0;if(removed&&page=="shelf")Switch("shelf");
   if(mediaWasPlaying&&!media.playing)celebrateUntil=DateTime.UtcNow.AddSeconds(1);mediaWasPlaying=media.playing;
@@ -88,6 +88,7 @@ public partial class App {
   var files=new DataObject(DataFormats.FileDrop,new[]{"C:\\sample.png"});ReceiveDrop(files);if(shelf[0].Files[0]!="C:\\sample.png")throw new Exception("Shelf file reference");
   for(int i=0;i<15;i++){var d=new DataObject();d.SetText("Item "+i);ReceiveDrop(d);}if(shelf.Count!=ShelfLimit||shelf[0].Text!="Item 14")throw new Exception("Shelf capacity/order");
   if(ShelfData(shelf[0]).GetText()!="Item 14")throw new Exception("Shelf clipboard payload");shelf.Clear();celebrateUntil=DateTime.MinValue;
+  {string ad,at,tt;var n0=new DateTime(2026,11,19,10,0,0);if(!ParseAgenda("amanhã 9h30 Dentista",n0,out ad,out at,out tt)||ad!="2026-11-20"||at!="09:30"||tt!="Dentista"||!ParseAgenda("14:30 X",n0,out ad,out at,out tt)||ad!="2026-11-19"||ParseAgenda("25:00 X",n0,out ad,out at,out tt)||ParseAgenda("qualquer coisa",n0,out ad,out at,out tt))throw new Exception("Agenda parser");}
   bool inter=false;foreach(var face in w.FontFamily.GetTypefaces()){GlyphTypeface glyph;if(face.TryGetGlyphTypeface(out glyph)&&glyph.FamilyNames.Values.Any(x=>x.IndexOf("Inter",StringComparison.OrdinalIgnoreCase)>=0)){inter=true;break;}}if(!inter)throw new Exception("Embedded Inter font did not resolve");
   foreach(string panel in new[]{"shelf","audio"}){Switch(panel);Capture(panel);}Switch("home");
  }
