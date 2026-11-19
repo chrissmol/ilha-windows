@@ -19,14 +19,15 @@ public partial class App {
  static void CmdDone(){celebrateUntil=DateTime.UtcNow.AddSeconds(2);}
  static void CmdOpen(string target){try{Process.Start(new ProcessStartInfo(target){UseShellExecute=true});}catch(Exception ex){MessageBox.Show("Não consegui abrir “"+target+"”.\n"+ex.Message,"Tito",MessageBoxButton.OK,MessageBoxImage.Information);}}
  static void CmdFocus(int minutes){running=false;remaining=minutes*60;end=DateTime.UtcNow.AddSeconds(remaining);running=true;Tick();CmdDone();}
+ static void CmdPauseFocus(){if(running){remaining=Math.Max(0,(end-DateTime.UtcNow).TotalSeconds);running=false;Tick();}}
  static List<KeyValuePair<string,Action>> CommandMatches(string text){
   var list=new List<KeyValuePair<string,Action>>();string t=(text??"").Trim();if(t.Length==0)return list;
   Action<string,Action> add=(label,run)=>list.Add(new KeyValuePair<string,Action>(label,run));
   Match m;
   if((m=Regex.Match(t,@"^(?:foco|focus)(?:\s+(\d{1,3}))?$",RegexOptions.IgnoreCase)).Success){int min=m.Groups[1].Success?Math.Max(1,Math.Min(MaxFocusMin,Int32.Parse(m.Groups[1].Value))):25;add("Iniciar foco de "+min+" min",()=>CmdFocus(min));}
-  if(Regex.IsMatch(t,@"^(?:parar|pausar|pause)\s+foco$",RegexOptions.IgnoreCase))add("Pausar o foco",()=>{if(running){remaining=Math.Max(0,(end-DateTime.UtcNow).TotalSeconds);running=false;Tick();}});
-  if((m=Regex.Match(t,@"^(?:nota|anotar)\s+(.+)$",RegexOptions.IgnoreCase)).Success){string note=m.Groups[1].Value;add("Anotar: "+note,()=>{try{string old=File.Exists(NotesPath())?File.ReadAllText(NotesPath()):"";File.AppendAllText(NotesPath(),(old.Length>0&&!old.EndsWith("\n")?"\n":"")+note+"\n");CmdDone();}catch(Exception ex){MessageBox.Show(ex.Message,"Tito");}});}
-  if((m=Regex.Match(t,@"^agenda\s+(?:(\d{4}-\d{2}-\d{2})\s+)?(\d{1,2}:\d{2})\s+(.+)$",RegexOptions.IgnoreCase)).Success){string date=m.Groups[1].Success?m.Groups[1].Value:DateTime.Now.ToString("yyyy-MM-dd");string time=m.Groups[2].Value.PadLeft(5,'0');string title=m.Groups[3].Value.Replace("|"," ");add("Agendar "+time+" "+title,()=>{try{File.AppendAllText(AgendaPath(),date+"|"+time+"|"+title+"\n");CmdDone();}catch(Exception ex){MessageBox.Show(ex.Message,"Tito");}});}
+  if(Regex.IsMatch(t,@"^(?:parar|pausar|pause)\s+foco$",RegexOptions.IgnoreCase))add("Pausar o foco",CmdPauseFocus);
+  if((m=Regex.Match(t,@"^(?:nota|anotar)\s+(.+)$",RegexOptions.IgnoreCase)).Success){string note=m.Groups[1].Value;add("Anotar: "+note,()=>{try{AddNote(note);CmdDone();}catch(Exception ex){MessageBox.Show(ex.Message,"Tito");}});}
+  if((m=Regex.Match(t,@"^agenda\s+(?:(\d{4}-\d{2}-\d{2})\s+)?(\d{1,2}:\d{2})\s+(.+)$",RegexOptions.IgnoreCase)).Success){string date=m.Groups[1].Success?m.Groups[1].Value:DateTime.Now.ToString("yyyy-MM-dd");string time=m.Groups[2].Value.PadLeft(5,'0');string title=m.Groups[3].Value.Replace("|"," ");add("Agendar "+time+" "+title,()=>{try{AddAgenda(date,time,title);CmdDone();}catch(Exception ex){MessageBox.Show(ex.Message,"Tito");}});}
   if(Regex.IsMatch(t,@"^(?:tocar|pausar|play|pause)$",RegexOptions.IgnoreCase))add("Tocar / pausar mídia",()=>SendMedia("toggle"));
   if(Regex.IsMatch(t,@"^(?:próxima|proxima|next)$",RegexOptions.IgnoreCase))add("Próxima faixa",()=>SendMedia("next"));
   string low=t.ToLowerInvariant();
