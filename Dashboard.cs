@@ -55,11 +55,6 @@ public partial class App {
   if(chatMessages==null)return null;var text=T(message,12,user?"#EEE8E6":"#D9D0DF");text.TextWrapping=TextWrapping.Wrap;
   var border=new Border{Child=text,CornerRadius=new CornerRadius(10),Padding=new Thickness(10,6,10,6),Margin=new Thickness(0,3,0,3),MaxWidth=450,Background=user?B("#25FFFFFF"):Brushes.Transparent,HorizontalAlignment=user?HorizontalAlignment.Right:HorizontalAlignment.Left};chatMessages.Children.Add(border);if(chatScroll!=null)chatScroll.ScrollToEnd();return text;
  }
- static string LocalRequest(string route,string payload=null){
-  var req=(HttpWebRequest)WebRequest.Create("http://127.0.0.1:11434/api/"+route);req.Timeout=payload==null?2000:60000;req.ReadWriteTimeout=req.Timeout;req.Proxy=null;
-  if(payload!=null){req.Method="POST";req.ContentType="application/json";byte[] b=System.Text.Encoding.UTF8.GetBytes(payload);req.ContentLength=b.Length;using(var stream=req.GetRequestStream())stream.Write(b,0,b.Length);}
-  using(var response=req.GetResponse())using(var reader=new StreamReader(response.GetResponseStream()))return reader.ReadToEnd();
- }
  // Only the latest turns go to the model (max 12 messages / ~6000 chars, always at least the last one); the saved history is capped at 100.
  static List<Dictionary<string,string>> RecentChat(){
   var list=new List<Dictionary<string,string>>();int chars=0;
@@ -71,16 +66,16 @@ public partial class App {
     string message=chatInput.Text;chatInput.Clear();conversation.Add(new Dictionary<string,string>{{"role","user"},{"content",message}});AddChatBubble(message,true);if(conversation.Count>100)conversation.RemoveRange(0,conversation.Count-100);chatBusy=true;
   TextBlock live=null;try{var context=new List<Dictionary<string,string>>{new Dictionary<string,string>{{"role","system"},{"content","Você é o Tito, um assistente dentro do app Tito, no Windows do usuário. Responda sempre em português do Brasil, de forma breve. Agora é "+DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy, HH:mm",new System.Globalization.CultureInfo("pt-BR"))+" (horário local do PC); use isso para perguntas sobre data e hora. Não invente acesso a tarefas, calendário ou arquivos. O timer está "+(running?"em andamento":"parado")+" e mostra "+Format(remaining)+". Você só conhece o que o usuário escreveu nesta conversa."}}};context.AddRange(RecentChat());
    if(On("chat"))live=AddChatBubble("…",false);Action<string> show=t=>{if(live!=null)live.Dispatcher.BeginInvoke(new Action(()=>{live.Text=t;if(chatScroll!=null)chatScroll.ScrollToEnd();}));};
-   string content;if(IsOllama()){string payload=json.Serialize(new{model=OllamaName(),messages=context,stream=true});content=await Task.Run(()=>PostStream("http://127.0.0.1:11434/api/chat",payload,60000,line=>{if(line.Length==0)return null;var m=json.Deserialize<Dictionary<string,object>>(line)["message"] as Dictionary<string,object>;return m==null?null:Convert.ToString(m["content"]);},show));}
+   string content;if(IsOllama()){content=await ChatStream(ExtPort(),OllamaName(),context,show);}
    else{MotorProgress+=MotorUi;MotorShowProgress(true);try{content=await MotorChat(context,show);}finally{MotorProgress-=MotorUi;MotorShowProgress(false);}}
    if(live!=null&&live.Parent!=null)live.Text=content;else if(On("chat"))AddChatBubble(content,false);
    conversation.Add(new Dictionary<string,string>{{"role","assistant"},{"content",content}});
-  }catch(Exception ex){var inner=ex is AggregateException&&ex.InnerException!=null?ex.InnerException:ex;if(live!=null)chatMessages.Children.Remove((UIElement)live.Parent);if(On("chat"))AddChatBubble(inner is MotorException?inner.Message:IsOllama()?"Não consegui conectar ao Ollama. Confira se ele está aberto, ou escolha a IA embutida do Tito em Settings.":"Não consegui usar a IA embutida: "+inner.Message,false);}finally{chatBusy=false;}
+  }catch(Exception ex){var inner=ex is AggregateException&&ex.InnerException!=null?ex.InnerException:ex;if(live!=null)chatMessages.Children.Remove((UIElement)live.Parent);if(On("chat"))AddChatBubble(inner is MotorException?inner.Message:IsOllama()?"Não consegui falar com "+ExtSource(ExtPort())+". Confira se ele está aberto com o modelo carregado, ou escolha a IA embutida do Tito em Settings.":"Não consegui usar a IA embutida: "+inner.Message,false);}finally{chatBusy=false;}
  }
- // Ollama is only an optional alternative: when it is running, its models are appended to the list.
+ // Servers already running on this PC are appended to the model list.
  static async void DetectModels(){
-  try{string raw=await Task.Run(()=>LocalRequest("tags"));var data=json.Deserialize<Dictionary<string,object>>(raw);foreach(Dictionary<string,object> entry in (System.Collections.IEnumerable)data["models"]){if(models==null)return;string n=Convert.ToString(entry["name"]);models.Items.Add(new ComboBoxItem{Content="Ollama · "+n,Tag="ollama:"+n});if(IsOllama()&&OllamaName()==n)models.SelectedIndex=models.Items.Count-1;}}
-  catch{}
+  var found=await ProbeLocalAIs();if(models==null)return;
+  foreach(var f in found){string tag="ext:"+f.Key+":"+f.Value;models.Items.Add(new ComboBoxItem{Content=ExtSource(f.Key)+" · "+f.Value,Tag=tag});if(IsOllama()&&ExtPort()==f.Key&&OllamaName()==f.Value)models.SelectedIndex=models.Items.Count-1;}
  }
 }
 }

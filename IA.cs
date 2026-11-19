@@ -35,8 +35,8 @@ public partial class App {
   if(painel!=null&&PainelActive("codex"))cards.Add((c,n)=>{
    var body=Stack();foreach(var l in PainelLimits().Where(r=>Convert.ToString(r["ia"])=="codex"))body.Children.Add(LimitRow(Convert.ToString(l["nome"]),Num(l["pct"]),l.ContainsKey("reinicia")?Num(l["reinicia"]):0));
    return IACard("CODEX","Em uso",Theme.Info,body,c,n);});
-  if(!String.IsNullOrEmpty(localModel))cards.Add((c,n)=>{
-   var body=Stack();var hint=T("Modelo: "+localModel,10.5,"#BDB4C7");hint.TextWrapping=TextWrapping.Wrap;body.Children.Add(hint);
+  cards.Add((c,n)=>{
+   var body=Stack();var hint=T("Modelo: "+MotorLabel()+(IsOllama()?" · servidor local deste PC":" · embutida no Tito"),10.5,"#BDB4C7");hint.TextWrapping=TextWrapping.Wrap;body.Children.Add(hint);
    var open=Btn("Conversar",()=>{iaTab="chat";Render();});open.HorizontalAlignment=HorizontalAlignment.Left;open.Margin=new Thickness(-10,6,0,0);body.Children.Add(open);
    return IACard("IA LOCAL · ROBO","Conectada",Theme.Ok,body,c,n);});
   if(cards.Count==0){var none=T("Nenhuma IA em uso agora",16);none.HorizontalAlignment=HorizontalAlignment.Center;none.VerticalAlignment=VerticalAlignment.Center;view.Children.Add(none);return;}
