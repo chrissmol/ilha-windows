@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 namespace Tito {
 public partial class App {
  // Color and play: every drawer has its own color (glow, buttons, headings), the active tab bounces, and finished work throws confetti.
@@ -22,8 +23,29 @@ public partial class App {
   if(activeNav==null||!SystemParameters.ClientAreaAnimation)return;var icon=activeNav.Content as UIElement;if(icon==null)return;
   var scale=new ScaleTransform(1,1);icon.RenderTransformOrigin=new Point(.5,.5);icon.RenderTransform=scale;
   var bounce=new DoubleAnimationUsingKeyFrames{Duration=TimeSpan.FromMilliseconds(380)};
-  bounce.KeyFrames.Add(new LinearDoubleKeyFrame(.8,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(90))));bounce.KeyFrames.Add(new LinearDoubleKeyFrame(1.22,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(230))));bounce.KeyFrames.Add(new LinearDoubleKeyFrame(1,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(380))));
-  scale.BeginAnimation(ScaleTransform.ScaleXProperty,bounce);scale.BeginAnimation(ScaleTransform.ScaleYProperty,bounce);
+  bounce.KeyFrames.Add(new LinearDoubleKeyFrame(.8,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(90))));bounce.KeyFrames.Add(new LinearDoubleKeyFrame(1.22,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(230))));bounce.KeyFrames.Add(new LinearDoubleKeyFrame(1.12,KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(380))));
+  icon.Effect=new System.Windows.Media.Effects.DropShadowEffect{Color=HexColor(PageHex(page)),BlurRadius=10,ShadowDepth=0,Opacity=.9};scale.BeginAnimation(ScaleTransform.ScaleXProperty,bounce);scale.BeginAnimation(ScaleTransform.ScaleYProperty,bounce);
+ }
+ // Eyes glance toward the new drawer, then it changes. Only when open and motion is allowed.
+ static DispatcherTimer goTimer;
+ static void GoTo(string target){
+  int d=Array.IndexOf(pageOrder,target)-Array.IndexOf(pageOrder,page);
+  if(d==0||!opened||!SystemParameters.ClientAreaAnimation){Switch(target);return;}
+  if(goTimer!=null)goTimer.Stop();
+  quirkGaze=new Point(d>0?3:-3,0);quirkUntil=DateTime.UtcNow.AddMilliseconds(450);
+  goTimer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(130)};goTimer.Tick+=(s,e)=>{goTimer.Stop();Switch(target);};goTimer.Start();
+ }
+ // Content enters in a cascade: each child of the page root rises and fades in, 45 ms after the previous one.
+ static void Cascade(){
+  var root=view.Children.Count>0?view.Children[0] as Panel:null;if(root==null)return;
+  for(int i=0;i<root.Children.Count&&i<8;i++){
+   var c=root.Children[i];if(c.Opacity!=1||(c.RenderTransform!=null&&c.RenderTransform!=Transform.Identity))continue;
+   var rise=new TranslateTransform(0,10);c.RenderTransform=rise;var delay=TimeSpan.FromMilliseconds(70+45*i);
+   var up=new DoubleAnimation(10,0,TimeSpan.FromMilliseconds(320)){BeginTime=delay,EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}};
+   var target=c;up.Completed+=(s,e)=>target.RenderTransform=Transform.Identity;
+   rise.BeginAnimation(TranslateTransform.YProperty,up);
+   c.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(280)){BeginTime=delay,FillBehavior=FillBehavior.Stop});
+  }
  }
  static readonly string[] confettiColors={"#FF375F",Theme.Warn,"#FFD60A",Theme.Ok,Theme.Info,"#BF5AF2"};
  static void Confetti(){
