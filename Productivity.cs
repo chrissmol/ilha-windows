@@ -89,11 +89,11 @@ public partial class App {
   search.KeyDown+=(s,e)=>{if(e.Key!=System.Windows.Input.Key.Enter)return;clipFilter=search.Text.Trim();Switch("clipboard");};rows.Children.Add(search);
   Func<string,bool> match=t=>clipFilter==""||t.IndexOf(clipFilter,StringComparison.CurrentCultureIgnoreCase)>=0;
   var pins=Pins().Where(match).ToList();var recent=clipItems.Where(t=>match(t)&&!Pins().Contains(t)).ToList();
-  if(pins.Count==0&&recent.Count==0)rows.Children.Add(T(clipFilter==""?"Copie um texto e ele aparece aqui. O histórico fica só na memória; fixe (📌) o que quiser guardar.":"Nada encontrado.",13,"#BDBDC5"));
+  if(pins.Count==0&&recent.Count==0){var empty=T(clipFilter==""?"Copie um texto e ele aparece aqui. O histórico fica só na memória; fixe (📌) o que quiser guardar.":"Nada encontrado.",13,"#BDBDC5");empty.TextWrapping=TextWrapping.Wrap;rows.Children.Add(empty);}
   foreach(string item in pins.Concat(recent)){string text=item;bool pinned=Pins().Contains(text);string line=text.Replace("\r"," ").Replace("\n"," ");
    var row=new DockPanel{Margin=new Thickness(0,1,0,1)};
    var pin=Btn(pinned?"✕":"📌",()=>{if(pinned)Pins().Remove(text);else{Pins().Remove(text);Pins().Insert(0,text);if(Pins().Count>30)Pins().RemoveAt(30);}SavePins();Switch("clipboard");},pinned?"Desafixar":"Fixar (salva no disco)");DockPanel.SetDock(pin,Dock.Right);row.Children.Add(pin);
-   var b=Btn((pinned?"📌 ":"")+(line.Length>64?line.Substring(0,64)+"…":line),()=>{lastClip=text;Clipboard.SetText(text);celebrateUntil=DateTime.UtcNow.AddSeconds(2);},"Copiar de novo");b.HorizontalContentAlignment=HorizontalAlignment.Left;row.Children.Add(b);rows.Children.Add(row);}
+   var label=new TextBlock{Text=(pinned?"📌 ":"")+line,TextTrimming=TextTrimming.CharacterEllipsis};var b=Btn("",()=>{lastClip=text;Clipboard.SetText(text);celebrateUntil=DateTime.UtcNow.AddSeconds(2);},"Copiar de novo");b.Content=label;b.ToolTip=text.Length>400?text.Substring(0,400)+"…":text;b.HorizontalContentAlignment=HorizontalAlignment.Left;row.Children.Add(b);rows.Children.Add(row);}
  }
  static List<string[]> AgendaEntries(){
   var list=new List<string[]>();try{if(File.Exists(AgendaPath()))foreach(string line in File.ReadAllLines(AgendaPath())){var p=line.Split(new[]{'|'},3);if(p.Length==3)list.Add(p);}}catch{}

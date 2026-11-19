@@ -57,11 +57,15 @@ public partial class App {
   var parent=view.Parent as Grid;
   if(ghost!=null&&parent!=null){
    if(lastGhost!=null)parent.Children.Remove(lastGhost);Grid.SetRow(ghost,1);parent.Children.Add(ghost);lastGhost=ghost;var move=new TranslateTransform();ghost.RenderTransform=move;
-   move.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(-24*dir,TimeSpan.FromMilliseconds(200)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseInOut}});
-   var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(130));fade.Completed+=(s,e)=>{parent.Children.Remove(ghost);if(lastGhost==ghost)lastGhost=null;};ghost.BeginAnimation(UIElement.OpacityProperty,fade);
+   move.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(-8*dir,TimeSpan.FromMilliseconds(140)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}});
+   var fade=new DoubleAnimation(0,TimeSpan.FromMilliseconds(110));fade.Completed+=(s,e)=>{parent.Children.Remove(ghost);if(lastGhost==ghost)lastGhost=null;};ghost.BeginAnimation(UIElement.OpacityProperty,fade);
   }
-  var slide=new TranslateTransform(24*dir,0);view.RenderTransform=slide;var ease=new CubicEase{EasingMode=EasingMode.EaseOut};
-  slide.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(0,TimeSpan.FromMilliseconds(420)){EasingFunction=new BackEase{Amplitude=.35,EasingMode=EasingMode.EaseOut}});Cascade();view.Opacity=0;view.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(260)){BeginTime=TimeSpan.FromMilliseconds(ghost!=null?90:0),EasingFunction=ease});
+  // New page: short ease-out (quint) with a small shift and a barely visible scale, no overshoot; it starts as the old page is almost gone so they never overlap.
+  var slide=new TranslateTransform(14*dir,0);var zoom=new ScaleTransform(.985,.985);var group=new TransformGroup();group.Children.Add(zoom);group.Children.Add(slide);view.RenderTransformOrigin=new Point(.5,.5);view.RenderTransform=group;
+  var quint=new QuinticEase{EasingMode=EasingMode.EaseOut};var wait=TimeSpan.FromMilliseconds(ghost!=null?70:0);var dur=TimeSpan.FromMilliseconds(280);
+  slide.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(0,dur){BeginTime=wait,EasingFunction=quint});
+  zoom.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(1,dur){BeginTime=wait,EasingFunction=quint});zoom.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(1,dur){BeginTime=wait,EasingFunction=quint});
+  Cascade();view.Opacity=0;view.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(1,TimeSpan.FromMilliseconds(220)){BeginTime=wait,EasingFunction=quint});
  }
  static void Focus(){
   var grid=new Grid();view.Children.Add(grid);
